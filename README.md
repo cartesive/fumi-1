@@ -12,6 +12,8 @@ It is built on [FoMni](https://github.com/charlesvestal/fm1-omnichord)'s platfor
 loader, USB, storage, screen driver, installer and browser emulator), which is kept byte-for-byte: all of
 FuMi lives in `firmware/src/app/` and `firmware/src/dsp/`.
 
+- **Play it in your browser** (no FM-1 needed): <https://cartesive.github.io/fumi-1/emu/>
+
 **Status (9 Oct 2026):** milestones M1 (toolchain, unmodified base built and tested), M2 (the pitch core)
 and M2.5 (the audition bench) are done on the host. The koto voice is being auditioned in the bench; nothing
 of FuMi's has been flashed yet. The research and plan are in `docs/research/` (`00-START-HERE.md` is the
