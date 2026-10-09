@@ -506,7 +506,8 @@ typedef struct {
     uint8_t c, a, b, layer;
 } lp_ev_t;
 static lp_ev_t lp_ev[LP_NEV] FM_POOL;
-static uint32_t lp_n, lp_len, lp_pos, lp_next, lp_max, lp_keys_down, lp_other_down;
+static uint32_t lp_n, lp_len, lp_pos, lp_next, lp_max, lp_keys_down, lp_other_down, lp_orn_on;
+#define LP_ROOM 33u                               /* a press is taken only with room for every release: 27 keys, 4 ornaments, 2 bends */
 static uint8_t lp_state, lp_layer, lp_click_on;
 static float lp_beat, lp_click_at, lp_click_ph, lp_click_inc, lp_click_g;
 volatile uint8_t fm_loop_state, fm_loop_layers;
@@ -518,6 +519,24 @@ static void lp_release_notes(void)                /* the loop's sounding notes l
     for (i = 0; i < FM_NVOICE; i++)
         if (vc[i].live && vc[i].down && lp_key_of(vc[i].id) >= 0)
             release(i);
+}
+
+static void lp_quiet(void)                       /* stop, undo, clear: what the loop turned on, off; its bend let go */
+{
+    uint32_t k;
+    for (k = 0; k < ORN_N; k++)
+        if (lp_orn_on >> k & 1u)
+            ornament((int)k, 0);
+    lp_orn_on = 0;
+    lp_bend_voice = -1;
+    bend_init(&lp_bend);
+    bend_targets();
+}
+
+static int lp_is_press(const lp_ev_t *e)         /* a press, an ornament on, a bend down: what sounds live already */
+{
+    uint32_t c = e->c & 0x7Fu;
+    return c == C_BEND ? (e->b & 1u) != 0u : e->b != 0u;
 }
 
 static void lp_play_ev(const lp_ev_t *e)
@@ -538,17 +557,20 @@ static void lp_play_ev(const lp_ev_t *e)
         }
         break;
     }
-    case C_ORN: ornament(e->a, e->b); break;
+    case C_ORN:
+        lp_orn_on = e->b ? lp_orn_on | 1u << e->a : lp_orn_on & ~(1u << e->a);
+        ornament(e->a, e->b);
+        break;
     case C_BEND: bend_button(&lp_bend, e->a, e->b & 1, (e->b >> 1) & 1, ms_count); break;
     default: break;
     }
 }
 
-static void lp_insert(uint32_t t, uint32_t c, int a, int b, int fresh)   /* after every event at or before t */
+static int lp_insert(uint32_t t, uint32_t c, int a, int b, int fresh)   /* after every event at or before t; 0 = no room */
 {
     uint32_t i, j;
     if (lp_n >= LP_NEV)
-        return;                                   /* full: the event is lost (a thousand fit) */
+        return 0;                                 /* full (a thousand fit): releases always have their room, below */
     for (i = lp_n; i > 0 && lp_ev[i - 1].t > t; i--)
         ;
     for (j = lp_n; j > i; j--)
@@ -561,6 +583,7 @@ static void lp_insert(uint32_t t, uint32_t c, int a, int b, int fresh)   /* afte
     lp_n++;
     if (i < lp_next)
         lp_next++;
+    return 1;
 }
 
 static void lp_layer_end(uint32_t t, int fresh)   /* releases for whatever the layer still has down */
@@ -597,12 +620,12 @@ static void lp_close(void)                        /* the loop is as long as what
 {
     uint32_t k, min = (uint32_t)lp_beat;
     lp_len = lp_pos > min ? lp_pos : min;
-    lp_layer_end(lp_len - 1u, 0);
     for (k = 0; k < lp_n; k++) {                  /* nothing has played yet: every event is due on the first pass */
         lp_ev[k].c &= (uint8_t)~LP_FRESH;
         if (lp_ev[k].t >= lp_len)
             lp_ev[k].t = lp_len - 1u;
     }
+    lp_layer_end(lp_len - 1u, 0);                 /* after the clamp: a press in the closing drain keeps its order */
     lp_pos = lp_next = 0;
     lp_click_at = 0.0f;
     lp_state = LP_PLAY;
@@ -614,8 +637,7 @@ static void lp_clear(void)
     lp_layer = 0;
     lp_state = LP_IDLE;
     lp_release_notes();
-    lp_bend_voice = -1;
-    bend_init(&lp_bend);
+    lp_quiet();
 }
 
 static void lp_dub_off(void)
@@ -650,11 +672,16 @@ static void lp_cmd(int what)
     case LC_PLAY:
         switch (lp_state) {
         case LP_DUB: lp_dub_off(); /* fall through */
-        case LP_PLAY:
+        case LP_PLAY: {
+            uint32_t k;
             lp_state = LP_STOP;
             lp_release_notes();
+            lp_quiet();
+            for (k = 0; k < lp_n; k++)            /* what was just recorded plays when the loop starts again */
+                lp_ev[k].c &= (uint8_t)~LP_FRESH;
             lp_pos = lp_next = 0;
             break;
+        }
         case LP_STOP: lp_state = LP_PLAY; lp_pos = lp_next = 0; lp_click_at = 0.0f; break;
         case LP_REC: lp_close(); break;
         case LP_ARMED: lp_state = LP_IDLE; break;
@@ -665,8 +692,11 @@ static void lp_cmd(int what)
         uint32_t k, j = 0;
         if (lp_layer == 0)
             break;
-        if (lp_state == LP_DUB)
+        if (lp_state == LP_DUB) {                 /* an overdub with nothing in it yet: the layer below goes */
             lp_state = LP_PLAY;
+            if (lp_layer_empty(lp_layer))
+                lp_layer--;
+        }
         if (lp_state == LP_REC) {                 /* the first take, undone: back to armed */
             lp_clear();
             lp_state = LP_ARMED;
@@ -680,6 +710,7 @@ static void lp_cmd(int what)
         lp_layer--;
         lp_keys_down = lp_other_down = 0;
         lp_release_notes();
+        lp_quiet();
         if (lp_layer == 0)
             lp_clear();
         else
@@ -703,7 +734,13 @@ static void lp_record(uint32_t c, int a, int b)   /* drain: an input while the l
     }
     if (lp_state != LP_REC && lp_state != LP_DUB)
         return;
-    lp_insert(lp_pos, c, a, b, 1);
+    {
+        int press = c == C_BEND ? (b & 1) != 0 : b != 0;
+        if (press && lp_n + LP_ROOM > LP_NEV)
+            return;                               /* no room for its release: the press is not taken either */
+        if (!lp_insert(lp_pos, c, a, b, 1))
+            return;
+    }
     if (c == C_KEY)
         lp_keys_down = b ? lp_keys_down | 1u << a : lp_keys_down & ~(1u << a);
     else if (c == C_ORN)
@@ -724,9 +761,10 @@ static void lp_block(void)                        /* every block, before the voi
     if (lp_state == LP_PLAY || lp_state == LP_DUB) {
         while (lp_next < lp_n && lp_ev[lp_next].t <= lp_pos) {
             lp_ev_t *e = &lp_ev[lp_next++];
-            if (e->c & LP_FRESH)
-                e->c &= (uint8_t)~LP_FRESH;       /* recorded just now: it sounds live already */
-            else
+            int fresh = (e->c & LP_FRESH) != 0;
+            e->c &= (uint8_t)~LP_FRESH;
+            if (!fresh || !lp_is_press(e))       /* a press recorded just now sounds live already; a release
+                                                  * may be for a copy the loop started a pass ago */
                 lp_play_ev(e);
         }
         if (++lp_pos >= lp_len) {
@@ -737,7 +775,10 @@ static void lp_block(void)                        /* every block, before the voi
         if (++lp_pos >= lp_max)
             lp_close();
     } else if (lp_state == LP_ARMED) {
-        lp_pos++;                                 /* counts for the click only */
+        if (++lp_pos >= lp_max) {                 /* counts for the click only, round the ruler */
+            lp_pos = 0;
+            lp_click_at = 0.0f;
+        }
     }
     if (lp_click_on && lp_state != LP_IDLE && lp_state != LP_STOP && (float)lp_pos >= lp_click_at) {
         int one = lp_click_at == 0.0f;            /* the first beat higher and a little louder */
@@ -844,10 +885,10 @@ void fm_init(void)
     nheld = 0;
     bend_voice = lp_bend_voice = -1;
     bend_init(&lp_bend);
-    lp_n = lp_len = lp_pos = lp_next = lp_keys_down = lp_other_down = 0;
+    lp_n = lp_len = lp_pos = lp_next = lp_keys_down = lp_other_down = lp_orn_on = 0;
     lp_state = LP_IDLE;
     lp_layer = 0;
-    lp_click_g = lp_click_ph = 0.0f;
+    lp_click_g = lp_click_ph = lp_click_at = 0.0f;
     ms_count = 0;
     ms_acc = 0.0f;
     vib_ph = vib_cur = 0.0f;

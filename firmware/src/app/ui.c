@@ -231,7 +231,9 @@ static void loop_hold(int which, uint32_t now)     /* which: 0 REC, 1 PLAY */
     if (dt > HOLD_MS) {
         ui.btn_used |= m;
         if (which) {
-            if (fm_loop_layers > 1u)
+            if (fm_loop_state == LP_REC)
+                say("TAKE DROPPED", "ARMED");
+            else if (fm_loop_layers > 1u)
                 say("LOOP", "UNDONE");
             else
                 say("LOOP", fm_loop_layers ? "EMPTIED" : "EMPTY");
@@ -472,6 +474,8 @@ static void draw_main(void)
         h = hash(h, (uint32_t)(fm_key_level[s] * 24.0f));
     uint32_t lp_state = fm_loop_state, lp_len = fm_loop_len, lp_pos = fm_loop_pos, lp_q;   /* one read each */
     lp_q = lp_state == LP_REC || lp_state == LP_ARMED ? lp_pos * 54u / loop_max_blocks() : lp_len ? lp_pos * 54u / lp_len : 0u;
+    if (lp_q > 54u)
+        lp_q = 54u;
     h = hash(hash(h, (uint32_t)proj.par[P_HON] | (uint32_t)proj.par[P_VOICE] << 8 | (uint32_t)proj.par[P_TUNING] << 16 |
                           (uint32_t)proj.par[P_SCALE] << 20 | (uint32_t)(proj.par[P_OCTAVE] + 1) << 24),
              (uint32_t)(fm_bend_cents * 4.0f + 1000.0f) | (uint32_t)fm_patch_custom << 16 | lp_state << 20 | lp_q << 24);

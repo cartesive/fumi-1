@@ -568,6 +568,121 @@ int main(void)
         fm_loop_clear();
         run(0, 256);
     }
+    /* the looper's corners (found in review): nothing may drone. A sustaining patch, so a loop note still down
+     * is a voice still counted */
+    {
+        uint8_t pk[128];
+        int i, k, down;
+        fm_init();
+        sustain_patch(pk, 99);
+        fm_patch_set(pk);
+        fm_set(P_REVERB, 0);
+        fm_set(P_YOIN, 0);
+        fm_set(P_LEVEL, 60);
+        fm_set(P_LOOP_BPM, 120);
+        fm_set(P_LOOP_BEATS, 8);
+        run(0, 256);
+        /* 1: a key pressed in the same drain as the REC that closes the loop: its release must follow its press */
+        fm_loop_rec();
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 256 * 100);
+        fm_key(5, 0);
+        run(0, 256 * 20);
+        fm_key(6, 1);
+        fm_loop_rec();                            /* the same drain as the press */
+        run(0, 256);
+        fm_key(6, 0);
+        CHECK("closed with a press in the same drain", fm_loop_state == LP_PLAY);
+        run(0, 256 * 130);                        /* a pass and a bit: past the press at the end */
+        run(0, 256 * 60);                         /* half way through the next pass: the loop note is released */
+        down = 0;
+        for (i = 0; i < FM_NVOICE; i++)
+            if (vc[i].live && vc[i].down && lp_key_of(vc[i].id) == 6)
+                down = 1;
+        CHECK("the loop's copy of that key is not left down", !down);
+        fm_loop_clear();
+        run(0, 256);
+        /* 2: the event store full: a press that cannot take its release with it is not recorded */
+        fm_set(P_LOOP_BPM, 30);
+        fm_set(P_LOOP_BEATS, 64);
+        fm_loop_rec();
+        run(0, 256);
+        for (k = 0; k < 530; k++) {               /* 1060 events offered, 1024 fit */
+            fm_key(k % FM_NKEY, 1);
+            run(0, 256);
+            fm_key(k % FM_NKEY, 0);
+            run(0, 256);
+        }
+        fm_loop_rec();
+        run(0, 256);
+        CHECK("the store holds what fits", fm_loop_state == LP_PLAY && fm_loop_events <= 1024u && fm_loop_events > 1000u);
+        run(0, (int)fm_loop_len * 32 - 256 - 100 * 32);   /* near the end of the pass: the taps that found no room
+                                                           * were the last ones; every press taken has had its release */
+        down = 0;
+        for (i = 0; i < FM_NVOICE; i++)
+            if (vc[i].live && vc[i].down && lp_key_of(vc[i].id) >= 0)
+                down = 1;
+        CHECK("a full store leaves no loop note down", !down);
+        fm_loop_clear();
+        run(0, 256);
+        fm_set(P_LOOP_BPM, 120);
+        fm_set(P_LOOP_BEATS, 8);
+        /* 3: an ornament the loop turned on is turned off by stop, undo and clear */
+        fm_loop_rec();
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 256 * 10);
+        fm_ornament(ORN_VIB, 1);
+        run(0, 256 * 40);
+        fm_ornament(ORN_VIB, 0);
+        fm_key(5, 0);
+        run(0, 256 * 10);
+        fm_loop_rec();
+        run(0, 256);
+        run(0, 256 * 20);                         /* into the next pass, inside the ornament */
+        CHECK("the loop turned the ornament on", orn[ORN_VIB] == 1);
+        fm_loop_play();
+        run(0, 256);
+        CHECK("stop turns the loop's ornament off", orn[ORN_VIB] == 0);
+        fm_loop_play();
+        run(0, 256 * 21);
+        CHECK("playing again: on again", orn[ORN_VIB] == 1);
+        fm_loop_clear();
+        run(0, 256);
+        CHECK("clear turns it off", orn[ORN_VIB] == 0 && fm_loop_state == LP_IDLE);
+        /* 4: an overdubbed note held longer than the loop: the loop's copy lets go when the hand does */
+        fm_loop_rec();
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 256 * 10);
+        fm_key(5, 0);
+        run(0, 256 * 50);
+        fm_loop_rec();
+        run(0, 256);
+        fm_loop_rec();                            /* overdub */
+        run(0, 256);
+        fm_key(9, 1);
+        run(0, (int)fm_loop_len * 32 + 256 * 10);   /* held through the wrap: the copy has started */
+        fm_key(9, 0);
+        run(0, 256 * 3);
+        down = 0;
+        for (i = 0; i < FM_NVOICE; i++)
+            if (vc[i].live && vc[i].down && lp_key_of(vc[i].id) == 9)
+                down = 1;
+        CHECK("the loop's copy of a note held past the wrap lets go with the hand", !down);
+        fm_loop_rec();
+        run(0, 256);
+        /* 5: undo during an overdub that recorded nothing undoes the layer below */
+        CHECK("two layers", fm_loop_layers == 2);
+        fm_loop_rec();
+        run(0, 256);
+        fm_loop_undo();
+        run(0, 256);
+        CHECK("undo in an empty overdub takes the layer below", fm_loop_layers == 1 && fm_loop_state == LP_PLAY);
+        fm_loop_clear();
+        run(0, 256);
+    }
     /* cost and headroom: the six-operator koto, eight voices held, reverb; the pre-clip peak (fm_peak) stays
      * inside what the soft clip handles gracefully. The device figure comes from plat_cpu_pct() at M4 */
     fm_set(P_VOICE, koto_a());

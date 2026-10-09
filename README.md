@@ -57,7 +57,7 @@ button; a failed install can leave it unable to start.
 
 - **To official V15:** the installer page's "Back to the stock firmware" with M-VAVE's `FM-1.fwsc` (it
   accepts exactly that file), or M-VAVE's own M-UPGRADE.
-- **Update mode from FuMi-1:** hold OCT− and OCT+ together for 5 seconds (a countdown shows from 3 s).
+- **Update mode from FuMi-1:** hold OCT− and OCT+ together for 5 seconds (a countdown appears after 2 s).
 - **If FuMi-1 crashes while starting:** it restarts; after two failed starts in a row it comes up in a safe
   mode with no sound and USB on, which accepts an install from the installer page.
 - **Black screen, and the computer sees a device called WL80UBOOT:** the chip is in its own download
