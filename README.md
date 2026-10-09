@@ -13,11 +13,14 @@ loader, USB, storage, screen driver, installer and browser emulator), which is k
 FuMi lives in `firmware/src/app/` and `firmware/src/dsp/`.
 
 - **Play it in your browser** (no FM-1 needed): <https://cartesive.github.io/fumi-1/emu/>
+- **Install it** (Chrome or Edge, FM-1 on USB): <https://cartesive.github.io/fumi-1/install/>
+- **The audition bench**: <https://cartesive.github.io/fumi-1/bench/>
 
-**Status (9 Oct 2026):** milestones M1 (toolchain, unmodified base built and tested), M2 (the pitch core)
-and M2.5 (the audition bench) are done on the host. The koto voice is being auditioned in the bench; nothing
-of FuMi's has been flashed yet. The research and plan are in `docs/research/` (`00-START-HERE.md` is the
-current truth).
+**Status (10 Oct 2026):** version 0.1 is the first release (identity `FM-1_7000100`): the pitch core, the
+FM engine with eleven instruments, the app, the host simulator, the browser emulator, the audition bench
+and the web installer. It has passed every host test and the update-path tests, and has not yet been
+played on hardware: the owner's first flash is the next step (M4; see `BUILDING.md`, Install). The
+research and plan are in `docs/research/` (`00-START-HERE.md` is the current truth).
 
 ## Playing
 

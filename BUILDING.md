@@ -75,23 +75,45 @@ script (the command list is at the top of `host/fumi_host.c`).
 
 ## Install
 
-From the command line (needs `pip3 install mido python-rtmidi`):
+**Before the first flash of your own build**, go through `docs/research/03-flashing-safety.md`. The short
+form:
+
+- The unit reports a known-good identity: `python3 tools/fm1_install.py --info` (stock V15 is `FM-1_015`;
+  FuMi-1 0.1 is `FM-1_7000100`). Custom firmware expects the unit to have been on stock V15.
+- The official `FM-1.fwsc` (V15) is on this computer and its SHA-256 is
+  `db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a`. It is the way home; the installer
+  page's "Back to the stock firmware" takes exactly that file.
+- You have installed your own build of unmodified FoMni and done one round trip, custom → V15 → custom
+  (`docs/upstream.md`, the M1 record). That proves the toolchain and the packaging before any FuMi code
+  is involved.
+- Battery charged; a direct USB data cable, no hub; Chrome or Edge; no DAW or other MIDI app open.
+- The package comes from a clean tree with `tests/run_tests.sh` green, including the update-path tests
+  (`ota-entry`, `update-loader`, `installer`, which need `AC79_SDK`).
+
+The web installer is the `install/` page of the site (`tools/make_pages.py`); from the command line
+(needs `pip3 install mido python-rtmidi`):
 
 ```
 python3 tools/fm1_install.py build/fumi.fwsc
 python3 tools/fm1_install.py --info          # identity of the connected FM-1
 ```
 
+Do not unplug until the installer says Done and the unit has restarted. Then: check the identity, hold
+OCT− and OCT+ for 3 s to see the update-mode countdown appear (release before 5 s), and play.
+
 Installing firmware is at your own risk. Hold OCT− and OCT+ for 5 seconds for Felucca's update
-mode. If the FM-1 no longer starts but reaches the chip's update mode (4C4A:8057 on USB),
-`tools/fm1_rescue.sh` puts stock firmware back from a Mac; otherwise recovery needs
+mode. Two failed boots in a row put FuMi-1 in safe mode (no audio, USB on, installable). If the FM-1 no
+longer starts but reaches the chip's update mode (4C4A:8057 on USB), `tools/fm1_rescue.sh` puts stock
+firmware back from a Mac; otherwise recovery needs
 [FM-1-transporter](https://github.com/kurogedelic/FM-1-transporter).
 
 ## Publishing a release
 
-1. `./build.sh --release X.Y` (the identity, FM-1_7XXYYZZ, is what the installer checks; confirm 7xx is
-   still free against awesome-fm-1 and the FM-1 Firmware Hub first).
-2. `tools/publish_pages.sh X.Y`: builds the site (landing page, browser emulator, web installer,
-   firmware) with `tools/make_pages.py` and pushes it to the `gh-pages` branch (M7: the pages still carry
-   FoMni's text and need rebranding before a first publish).
-3. `gh release create vX.Y build/fumi-X.Y.fwsc` for the command-line download.
+1. `./build.sh --release X.Y` (the identity, FM-1_7XXYYZZ, is what the installer checks; 7xx was free on
+   awesome-fm-1 at 0.1).
+2. `AC79_SDK=~/fw-AC79_AIoT_SDK tests/run_tests.sh`, all green, and the three update-path tests run by hand
+   against the release package too (`tests/ota_test.c`, `tests/ldr_test.c`, `tests/install_test.py`).
+3. `tools/publish_pages.sh X.Y`: builds the site (landing page, browser emulator, audition bench, web
+   installer, firmware download) with `tools/make_pages.py` and pushes it to the `gh-pages` branch.
+4. `git tag vX.Y` and `gh release create vX.Y build/fumi-X.Y.fwsc` for the command-line download, with the
+   package's SHA-256 in the notes.
