@@ -1,4 +1,6 @@
 build/
-.DS_Store
+refs/*
+!refs/README.md
+*.fwsc
 __pycache__/
-*.o
+.DS_Store
