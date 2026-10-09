@@ -6,7 +6,7 @@
 
   tools/fumi_patches.py firmware/src/dsp/fumi_patches.h
 
-No factory ROM data of any instrument is in here (N-KOTO-A5 is a community patch, see its note): these are starting points written as readable operator
+No factory ROM data of any instrument is in here (patches 6 on are community patches, see their notes): these are starting points written as readable operator
 settings from what the ST-50's koto measures like (docs/research/13: a click in the first 12 ms, a body of
 partials 1 to 4, a two-stage decay, steady pitch). The audition bench (web/bench) is where they get better;
 a finalist is written back here as numbers.
@@ -104,6 +104,47 @@ PATCHES = [
         op(r=(91, 54, 29, 29), l=(99, 90, 0, 0), ol=81, fc=4, kvs=1, rs=4, rd=5, rc=0),
         op(r=(82, 82, 37, 48), l=(99, 81, 0, 0), ol=0, fc=3, kvs=1, rs=5, rd=10, rc=0),
     ], fb=5, pr=(90, 11, 75, 53), pl=(49, 50, 50, 50), lfs=30, lfd=0, lpmd=0, lamd=16, lpms=2, trnsp=24)),
+    # the owner's further picks (patches.fm), 9 Oct 2026: four flutes and a drum, community banks, authors as given
+    ('Air---*--3', voice('Air---*--3', 1, [            # patches.fm: _Unknown, FLUTE01.SYX
+        op(r=(58, 99, 0, 44), l=(99, 99, 99, 0), ol=99, fc=0, det=0, mode=1, kvs=1),
+        op(r=(96, 94, 30, 39), l=(99, 99, 0, 0), ol=82, fc=2, det=0, rd=5, rc=0),
+        op(r=(67, 99, 0, 44), l=(99, 99, 99, 0), ol=80, fc=3, det=11, kvs=1),
+        op(r=(83, 46, 53, 30), l=(99, 99, 75, 29), ol=79, fc=3, ff=17, det=11, kvs=5),
+        op(r=(93, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=3, ff=15),
+        op(r=(99, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=9, ff=6),
+    ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=38, lfd=0, lpmd=10, lamd=0, lks=0, lfw=0, lpms=2, trnsp=12)),
+    ('AirFltMal1', voice('AirFltMal1', 1, [            # patches.fm: _Unknown, FLUTE01.SYX
+        op(r=(58, 99, 0, 44), l=(99, 99, 99, 0), ol=99, fc=12, det=1, mode=1),
+        op(r=(96, 94, 30, 39), l=(99, 99, 0, 0), ol=82, det=0, rd=5, rc=0),
+        op(r=(99, 99, 0, 44), l=(99, 99, 99, 0), ol=99, det=11, kvs=7),
+        op(r=(99, 46, 53, 30), l=(99, 99, 75, 29), ol=98, fc=2, det=0, kvs=2, rd=7, rc=0),
+        op(r=(93, 99, 99, 0), l=(99, 99, 99, 0), ol=39, fc=0, mode=1),
+        op(r=(99, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=11, ff=14, mode=1),
+    ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=38, lfd=0, lpmd=10, lamd=0, lks=0, lfw=0, lpms=2, trnsp=24)),
+    ('ALTO FLUTE', voice('ALTO FLUTE', 14, [            # patches.fm: _Unknown, FLUTE01.SYX
+        op(r=(53, 24, 37, 90), l=(99, 36, 0, 0), ol=94, det=5, kvs=7, ams=3, bp=99, ld=99, lc=1),
+        op(r=(99, 41, 21, 99), l=(99, 99, 99, 0), ol=99, ams=1, rd=99, rc=0, ld=99, lc=0),
+        op(r=(44, 62, 52, 63), l=(99, 98, 97, 0), ol=99, det=9, kvs=2, rs=2),
+        op(r=(39, 60, 57, 33), l=(63, 99, 99, 0), ol=60, det=5, ams=2),
+        op(r=(76, 99, 99, 35), l=(99, 97, 94, 0), ol=61, det=10),
+        op(r=(49, 53, 58, 99), l=(75, 97, 91, 0), ol=41, fc=2, det=4, ams=1),
+    ], fb=0, oks=1, pr=(98, 98, 98, 98), pl=(50, 50, 50, 50), lfs=33, lfd=42, lpmd=0, lamd=59, lks=0, lfw=4, lpms=1, trnsp=24)),
+    ('Bamboo Flt', voice('Bamboo Flt', 5, [            # patches.fm: _Unknown, FLUTE01.SYX
+        op(r=(46, 42, 99, 55), l=(99, 90, 90, 0), ol=99, kvs=2, ams=3, rs=1),
+        op(r=(99, 99, 99, 43), l=(99, 99, 99, 0), ol=73, fc=2, det=10, kvs=2, bp=39, rd=99, rc=1),
+        op(r=(46, 99, 99, 64), l=(99, 99, 99, 0), ol=64, fc=2, det=13, kvs=2, ams=2, rs=1),
+        op(r=(99, 99, 99, 42), l=(99, 99, 99, 0), ol=56, fc=3, kvs=2, bp=39, rd=99, rc=1),
+        op(r=(54, 99, 52, 99), l=(99, 99, 66, 0), ol=64, fc=0, det=11, kvs=4, ams=2, bp=27, rd=15, rc=1),
+        op(r=(99, 99, 49, 99), l=(99, 99, 93, 0), ol=99, fc=10),
+    ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=26, lfd=39, lpmd=6, lamd=0, lks=0, lfw=4, lpms=2, trnsp=24)),
+    ('T. Drum', voice('T. Drum', 15, [               # patches.fm: Tim Garrett, TX7-32B.SYX, renamed from 'Bongos.2'
+        op(r=(99, 40, 74, 38), l=(99, 0, 0, 0), ol=62, ff=46, kvs=4, rs=4, bp=2),
+        op(r=(99, 22, 42, 25), l=(99, 0, 0, 0), ol=41, fc=7, ff=75, mode=1, rs=5, bp=2),
+        op(r=(99, 34, 37, 45), l=(99, 0, 0, 0), ol=99, fc=0, ff=4, kvs=1, rs=6, bp=2),
+        op(r=(99, 99, 99, 98), l=(99, 99, 0, 0), ol=64, fc=4, ff=2, det=10, rs=7, bp=2),
+        op(r=(99, 94, 99, 43), l=(99, 27, 0, 0), ol=99, fc=3, ff=4, det=6, rs=7, bp=14),
+        op(r=(99, 75, 99, 23), l=(99, 0, 0, 0), ol=99, ff=50, det=8, mode=1, rs=7, bp=14),
+    ], fb=0, oks=1, pr=(98, 98, 98, 98), pl=(50, 50, 50, 50), lfs=4, lfd=0, lpmd=0, lamd=80, lks=1, lfw=2, lpms=7, trnsp=24)),
 ]
 
 
