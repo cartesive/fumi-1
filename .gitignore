@@ -4,3 +4,4 @@ refs/*
 *.fwsc
 __pycache__/
 .DS_Store
+.superpowers/
