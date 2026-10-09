@@ -39,6 +39,14 @@ static float peak_of(int from, int to)
     return pk;
 }
 static double db(float x) { return 20.0 * log10(x > 1e-9f ? (double)x : 1e-9); }
+static int koto_a(void)                           /* the slot of FuMi's own KOTO A (the owner's picks come first) */
+{
+    int i;
+    for (i = 0; i < fm_patch_count(); i++)
+        if (!strcmp(fm_patch_name(i), "KOTO A"))
+            return i;
+    return 0;
+}
 static int onsets(int from, int to)               /* rises of 4 dB within 10 ms of the 5 ms RMS envelope: a koto
                                                    * decaying at the ST-50's -28 dB/s drops only 5-6 dB between
                                                    * re-plucks at the middle trill rate */
@@ -193,7 +201,7 @@ int main(void)
     run(0, 8192);
 
     /* トリラー: the held note re-plucked at the rate (on a decaying voice: the built-in koto) */
-    fm_set(P_VOICE, 0);
+    fm_set(P_VOICE, koto_a());
     fm_set(P_TRILL_ON, 1);
     fm_set(P_TRILL_RATE, 50);
     fm_set(P_TRILL_VAR, 0);
@@ -265,9 +273,9 @@ int main(void)
         CHECK("patch set / get round trip", !memcmp(a, b, 128));
         CHECK("a sent patch is custom", fm_patch_custom == 1);
         CHECK("built-in patches exist", fm_patch_count() >= 2 && fm_patch_name(0)[0] != 0);
-        fm_set(P_VOICE, 0);
+        fm_set(P_VOICE, koto_a());
         run(0, 256);
-        CHECK("P_VOICE loads a built-in", fm_patch_custom == 0 && !strncmp((const char *)fm_patch_label, fm_patch_name(0), strlen(fm_patch_name(0))));
+        CHECK("P_VOICE loads a built-in", fm_patch_custom == 0 && !strncmp((const char *)fm_patch_label, "KOTO A", 6));
         fm_key(5, 1);
         {
             float pk = run(0, 22016);
@@ -339,7 +347,7 @@ int main(void)
 
     /* keyboard scaling: the built-in koto (rate and level scaling on its carriers) decays faster at the top
      * of the range than at the bottom; a constant note number into the FM6 core would make them identical */
-    fm_set(P_VOICE, 0);
+    fm_set(P_VOICE, koto_a());
     fm_set(P_YOIN, 100);
     run(0, 256);
     {
@@ -385,7 +393,7 @@ int main(void)
 
     /* cost and headroom: the six-operator koto, eight voices held, reverb; the pre-clip peak (fm_peak) stays
      * inside what the soft clip handles gracefully. The device figure comes from plat_cpu_pct() at M4 */
-    fm_set(P_VOICE, 0);
+    fm_set(P_VOICE, koto_a());
     fm_set(P_REVERB, 50);
     fm_set(P_LEVEL, 80);
     run(0, 256);

@@ -6,7 +6,7 @@
 
   tools/fumi_patches.py firmware/src/dsp/fumi_patches.h
 
-No factory ROM data of any instrument is in here (patches 6 on are community patches, see their notes): these are starting points written as readable operator
+No factory ROM data of any instrument is in here (N-KOTO-A5 and patches 2 to 6 are community patches, see their notes): these are starting points written as readable operator
 settings from what the ST-50's koto measures like (docs/research/13: a click in the first 12 ms, a body of
 partials 1 to 4, a two-stage decay, steady pitch). The audition bench (web/bench) is where they get better;
 a finalist is written back here as numbers.
@@ -63,38 +63,6 @@ def pack(v):
 # click 7-9 dB above 5 kHz in the first 12 ms; -28 dB/s for 200 ms then -16; peak within 5 ms). WARM is A
 # with the modulators turned down and the third stack up. Measured again through the host in tests.
 PATCHES = [
-    ("KOTO A", voice("KOTO A", 5, [
-        op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=75, rs=2, rd=25, rc=0),
-        op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=82, fc=2, rs=4),
-        op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=89, rs=2, rd=30, rc=0),
-        op(r=(99, 60, 32, 60), l=(99, 91, 90, 0), ol=91, fc=1, rs=3),
-        op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=70, fc=1, det=9, rs=2),
-        op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=84, fc=1, det=5, rs=2),
-    ], fb=2)),
-    ("KOTO B", voice("KOTO B", 5, [                 # brighter: the twang stack at ratio 3, harder
-        op(r=(99, 52, 95, 60), l=(99, 87, 0, 0), ol=80, rs=2, rd=25, rc=0),
-        op(r=(99, 93, 32, 60), l=(99, 90, 34, 0), ol=99, fc=3, rs=4),
-        op(r=(99, 99, 32, 60), l=(99, 91, 0, 0), ol=89, rs=2, rd=30, rc=0),
-        op(r=(99, 40, 26, 60), l=(99, 99, 86, 0), ol=84, fc=1, rs=3),
-        op(r=(99, 95, 54, 60), l=(99, 83, 0, 0), ol=87, fc=1, det=9, rs=2),
-        op(r=(99, 28, 77, 60), l=(99, 67, 8, 0), ol=75, fc=1, det=5, rs=2),
-    ], fb=5)),
-    ("KOTO WARM", voice("KOTO WARM", 5, [           # A, rounder: less twang and body index, more of stack C
-        op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=72, rs=2, rd=25, rc=0),
-        op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=72, fc=2, rs=4),
-        op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=89, rs=2, rd=30, rc=0),
-        op(r=(99, 60, 32, 60), l=(99, 91, 90, 0), ol=85, fc=1, rs=3),
-        op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=78, fc=1, det=9, rs=2),
-        op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=70, fc=1, det=5, rs=2),
-    ], fb=2)),
-    ("HARP SOFT", voice("HARP SOFT", 5, [           # a harp-like pluck: softer attack, long even decay
-        op(r=(95, 70, 50, 65), l=(99, 70, 0, 0), ol=80, rs=2, rd=20, rc=0),
-        op(r=(99, 85, 50, 80), l=(99, 0, 0, 0), ol=66, fc=3, rs=3),
-        op(r=(96, 40, 30, 55), l=(99, 85, 0, 0), ol=99, rs=2, rd=25, rc=0),
-        op(r=(99, 55, 45, 60), l=(99, 55, 0, 0), ol=60, fc=1, rs=2),
-        op(r=(96, 38, 28, 55), l=(99, 70, 0, 0), ol=62, fc=1, det=10, rs=2),
-        op(r=(99, 60, 40, 60), l=(99, 40, 0, 0), ol=30, fc=1, det=4, rs=2),
-    ], fb=1)),
     ("N-KOTO-A5", voice("N-KOTO-A5", 2, [           # the owner's pick, 9 Oct 2026: the Aminet dx-syx collection, bank 073.syx,
                                                     # author unknown (patches.fm). Not a Yamaha ROM voice. Algorithm 2.
         op(r=(94, 43, 16, 34), l=(99, 92, 0, 0), ol=99, kvs=1, rs=7),
@@ -104,7 +72,8 @@ PATCHES = [
         op(r=(91, 54, 29, 29), l=(99, 90, 0, 0), ol=81, fc=4, kvs=1, rs=4, rd=5, rc=0),
         op(r=(82, 82, 37, 48), l=(99, 81, 0, 0), ol=0, fc=3, kvs=1, rs=5, rd=10, rc=0),
     ], fb=5, pr=(90, 11, 75, 53), pl=(49, 50, 50, 50), lfs=30, lfd=0, lpmd=0, lamd=16, lpms=2, trnsp=24)),
-    # the owner's further picks (patches.fm), 9 Oct 2026: four flutes and a drum, community banks, authors as given
+    # the owner's further picks (patches.fm), 9 Oct 2026: four flutes and a drum, community banks, authors as given;
+# they follow the boot patch, FuMi's own kotos come after
     ('Air---*--3', voice('Air---*--3', 1, [            # patches.fm: _Unknown, FLUTE01.SYX
         op(r=(58, 99, 0, 44), l=(99, 99, 99, 0), ol=99, fc=0, det=0, mode=1, kvs=1),
         op(r=(96, 94, 30, 39), l=(99, 99, 0, 0), ol=82, fc=2, det=0, rd=5, rc=0),
@@ -145,6 +114,38 @@ PATCHES = [
         op(r=(99, 94, 99, 43), l=(99, 27, 0, 0), ol=99, fc=3, ff=4, det=6, rs=7, bp=14),
         op(r=(99, 75, 99, 23), l=(99, 0, 0, 0), ol=99, ff=50, det=8, mode=1, rs=7, bp=14),
     ], fb=0, oks=1, pr=(98, 98, 98, 98), pl=(50, 50, 50, 50), lfs=4, lfd=0, lpmd=0, lamd=80, lks=1, lfw=2, lpms=7, trnsp=24)),
+    ("KOTO A", voice("KOTO A", 5, [
+        op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=75, rs=2, rd=25, rc=0),
+        op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=82, fc=2, rs=4),
+        op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=89, rs=2, rd=30, rc=0),
+        op(r=(99, 60, 32, 60), l=(99, 91, 90, 0), ol=91, fc=1, rs=3),
+        op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=70, fc=1, det=9, rs=2),
+        op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=84, fc=1, det=5, rs=2),
+    ], fb=2)),
+    ("KOTO B", voice("KOTO B", 5, [                 # brighter: the twang stack at ratio 3, harder
+        op(r=(99, 52, 95, 60), l=(99, 87, 0, 0), ol=80, rs=2, rd=25, rc=0),
+        op(r=(99, 93, 32, 60), l=(99, 90, 34, 0), ol=99, fc=3, rs=4),
+        op(r=(99, 99, 32, 60), l=(99, 91, 0, 0), ol=89, rs=2, rd=30, rc=0),
+        op(r=(99, 40, 26, 60), l=(99, 99, 86, 0), ol=84, fc=1, rs=3),
+        op(r=(99, 95, 54, 60), l=(99, 83, 0, 0), ol=87, fc=1, det=9, rs=2),
+        op(r=(99, 28, 77, 60), l=(99, 67, 8, 0), ol=75, fc=1, det=5, rs=2),
+    ], fb=5)),
+    ("KOTO WARM", voice("KOTO WARM", 5, [           # A, rounder: less twang and body index, more of stack C
+        op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=72, rs=2, rd=25, rc=0),
+        op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=72, fc=2, rs=4),
+        op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=89, rs=2, rd=30, rc=0),
+        op(r=(99, 60, 32, 60), l=(99, 91, 90, 0), ol=85, fc=1, rs=3),
+        op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=78, fc=1, det=9, rs=2),
+        op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=70, fc=1, det=5, rs=2),
+    ], fb=2)),
+    ("HARP SOFT", voice("HARP SOFT", 5, [           # a harp-like pluck: softer attack, long even decay
+        op(r=(95, 70, 50, 65), l=(99, 70, 0, 0), ol=80, rs=2, rd=20, rc=0),
+        op(r=(99, 85, 50, 80), l=(99, 0, 0, 0), ol=66, fc=3, rs=3),
+        op(r=(96, 40, 30, 55), l=(99, 85, 0, 0), ol=99, rs=2, rd=25, rc=0),
+        op(r=(99, 55, 45, 60), l=(99, 55, 0, 0), ol=60, fc=1, rs=2),
+        op(r=(96, 38, 28, 55), l=(99, 70, 0, 0), ol=62, fc=1, det=10, rs=2),
+        op(r=(99, 60, 40, 60), l=(99, 40, 0, 0), ol=30, fc=1, det=4, rs=2),
+    ], fb=1)),
 ]
 
 

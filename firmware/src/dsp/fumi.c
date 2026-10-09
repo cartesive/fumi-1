@@ -27,7 +27,7 @@
 static const fm_param_t PARAMS[P_NPARAMS] = {
     {"Hon", 0, TN_NHON - 1, 4}, {"Scale", 0, SC_N - 1, SC_IN}, {"Tuning", 0, TN_N - 1, TN_SUIKO}, {"Depth", 0, 150, 100},
     {"Fine", -50, 50, 0}, {"A", 430, 445, 440}, {"Octave", -1, 1, 0},
-    {"Voice", 0, FM_NPATCH - 1, 4}, {"Yoin", 0, 100, 80}, {"Level", 0, 100, 80},
+    {"Voice", 0, FM_NPATCH - 1, 0}, {"Yoin", 0, 100, 80}, {"Level", 0, 100, 80},
     {"Vibrato", 0, 1, 0}, {"Vib rate", 0, 100, 45}, {"Vib depth", 0, 100, 80},
     {"Trill", 0, 1, 0}, {"Trill rate", 0, 100, 50}, {"Trill var", 0, 100, 30},
     {"Mono", 0, 1, 0}, {"Black keys", 0, 1, 0}, {"Bend up", 0, 2, BEND_T_SEMI}, {"Bend down", 0, 100, 40},
