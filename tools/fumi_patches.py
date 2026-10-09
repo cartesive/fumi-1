@@ -6,7 +6,7 @@
 
   tools/fumi_patches.py firmware/src/dsp/fumi_patches.h
 
-No factory ROM data of any instrument is in here: these are starting points written as readable operator
+No factory ROM data of any instrument is in here (N-KOTO-A5 is a community patch, see its note): these are starting points written as readable operator
 settings from what the ST-50's koto measures like (docs/research/13: a click in the first 12 ms, a body of
 partials 1 to 4, a two-stage decay, steady pitch). The audition bench (web/bench) is where they get better;
 a finalist is written back here as numbers.
@@ -95,7 +95,15 @@ PATCHES = [
         op(r=(96, 38, 28, 55), l=(99, 70, 0, 0), ol=62, fc=1, det=10, rs=2),
         op(r=(99, 60, 40, 60), l=(99, 40, 0, 0), ol=30, fc=1, det=4, rs=2),
     ], fb=1)),
-    ("SINE", voice("SINE", 1, [op(ol=99, r=(99, 99, 99, 60), l=(99, 99, 99, 0))] + [op() for _ in range(5)])),
+    ("N-KOTO-A5", voice("N-KOTO-A5", 2, [           # the owner's pick, 9 Oct 2026: the Aminet dx-syx collection, bank 073.syx,
+                                                    # author unknown (patches.fm). Not a Yamaha ROM voice. Algorithm 2.
+        op(r=(94, 43, 16, 34), l=(99, 92, 0, 0), ol=99, kvs=1, rs=7),
+        op(r=(99, 47, 32, 48), l=(99, 86, 0, 0), ol=87, fc=4, rs=7, rd=11, rc=0),
+        op(r=(94, 64, 20, 31), l=(99, 92, 0, 0), ol=99, kvs=1, rs=5),
+        op(r=(90, 33, 18, 39), l=(99, 72, 0, 0), ol=89, kvs=1, rs=6, bp=10, rd=22, rc=1),
+        op(r=(91, 54, 29, 29), l=(99, 90, 0, 0), ol=81, fc=4, kvs=1, rs=4, rd=5, rc=0),
+        op(r=(82, 82, 37, 48), l=(99, 81, 0, 0), ol=0, fc=3, kvs=1, rs=5, rd=10, rc=0),
+    ], fb=5, pr=(90, 11, 75, 53), pl=(49, 50, 50, 50), lfs=30, lfd=0, lpmd=0, lamd=16, lpms=2, trnsp=24)),
 ]
 
 
