@@ -6,6 +6,7 @@
 // reference clips from refs/ level-matched, notes and ratings per patch, a session file for the repo, and a
 // DX7 .syx bank of the finalists for the stock firmware.
 import { FP, parseSyx, makeBank, pack, unpack, initVoice, morph, voiceName, setVoiceName, opOffset, byteMax, CARRIERS } from "./syx.js";
+import { serialize, deserialize, reattach, derivedFrom } from "./session.js";
 
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -35,7 +36,7 @@ function param(name, v) {
 // ---------------------------------------------------------------- patches
 function newPatch(voice, source, extra = {}) {
   return { id: Math.random().toString(36).slice(2, 9), name: voiceName(voice), voice: new Uint8Array(voice), source,
-           rating: 0, notes: { attack: "", body: "", tail: "", gliss: "", registers: "", free: "" }, exp: false, ...extra };
+           rating: 0, notes: { attack: "", body: "", tail: "", gliss: "", registers: "", free: "" }, exp: false, rom: false, pending: false, ...extra };
 }
 function addPatch(p, quiet) {
   S.patches.push(p);
@@ -64,9 +65,11 @@ function select(i, why) {
     $("notesname").textContent = p.name;
     $("pname").value = p.name;
   }
-  $("exportmark").checked = !!p.exp;
-  renderEditor();
-  renderNotes();
+  if (!S.blind) {                                            // blind: no editor, notes, marks or row highlight
+    $("exportmark").checked = !!p.exp;
+    renderEditor();
+    renderNotes();
+  }
   renderList();
   if (why) log(`playing ${S.blind ? "(blind)" : p.name}${why === "click" ? "" : " " + why}`);
 }
@@ -80,7 +83,7 @@ function renderList() {
   box.innerHTML = "";
   S.patches.forEach((p, i) => {
     const d = document.createElement("div");
-    d.className = "patch" + (i === S.cur ? " cur" : "");
+    d.className = "patch" + (i === S.cur && !S.blind ? " cur" : "") + (p.pending ? " pending" : "");
     const tags = (i === S.a ? '<span class="tag">A</span>' : "") + (i === S.b ? '<span class="tag">B</span>' : "") + (p.exp ? '<span class="tag" style="background:#b36b00">syx</span>' : "");
     d.innerHTML = `<span class="name ${S.blind ? "blind" : ""}">${i < 10 ? `<kbd>${(i + 1) % 10}</kbd> ` : ""}${esc(p.name)}${tags}</span>
       <span class="stars" title="rating">${stars(p.rating)}</span>
@@ -89,8 +92,9 @@ function renderList() {
       const a = e.target.dataset.a;
       if (a === "a") { S.a = i; $("aname").textContent = p.name; renderList(); log(`A = ${p.name}`); morphUpdate(); return; }
       if (a === "b") { S.b = i; $("bname").textContent = p.name; renderList(); log(`B = ${p.name}`); morphUpdate(); return; }
-      if (a === "del") { S.patches.splice(i, 1); if (S.a === i) S.a = -1; if (S.b === i) S.b = -1; if (S.a > i) S.a--; if (S.b > i) S.b--;
+      if (a === "del") { if (!confirm(`Remove ${p.name} and its notes?`)) return; S.patches.splice(i, 1); if (S.a === i) S.a = -1; if (S.b === i) S.b = -1; if (S.a > i) S.a--; if (S.b > i) S.b--;
                          if (S.cur === i) S.cur = -1; else if (S.cur > i) S.cur--; log(`removed ${p.name}`); renderList(); return; }
+      if (p.pending) { log(`${p.name} has no bytes here: load ${p.source} again (refs/ or Load .syx)`); return; }
       select(i, "click");
     });
     box.appendChild(d);
@@ -149,24 +153,24 @@ function showByte(idx, v) {
 function hybrids() {
   if (S.a < 0 || S.b < 0) { alert("Mark a patch as A and one as B first."); return; }
   const A = S.patches[S.a].voice, B = S.patches[S.b].voice, an = voiceName(A).slice(0, 4), bn = voiceName(B).slice(0, 4);
-  const src = `hybrid of ${voiceName(A)} + ${voiceName(B)}`;
-  for (const t of [0.25, 0.5, 0.75]) addPatch(newPatch(morph(A, B, t), src), true);
+  const src = `hybrid of ${voiceName(A)} + ${voiceName(B)}`, rom = derivedFrom([S.patches[S.a], S.patches[S.b]]);
+  for (const t of [0.25, 0.5, 0.75]) addPatch(newPatch(morph(A, B, t), src, { rom }), true);
   const mix = (att, body, name) => {                         // stack A (OP1, OP2) from one, the rest and the voice block from the other
     const v = new Uint8Array(body);
     for (const k of [1, 2]) v.set(att.subarray(opOffset(k), opOffset(k) + FP.OP), opOffset(k));
     v[FP.ALG] = 4;                                           // algorithm 5: three pairs, so the stacks stay separate
     return setVoiceName(v, name);
   };
-  addPatch(newPatch(mix(A, B, `${an}>${bn}`), src + " (A's attack stack on B)"), true);
-  addPatch(newPatch(mix(B, A, `${bn}>${an}`), src + " (B's attack stack on A)"), true);
+  addPatch(newPatch(mix(A, B, `${an}>${bn}`), src + " (A's attack stack on B)", { rom }), true);
+  addPatch(newPatch(mix(B, A, `${bn}>${an}`), src + " (B's attack stack on A)", { rom }), true);
   const env = new Uint8Array(B);                              // B with A's envelopes
   for (let k = 1; k <= 6; k++) for (let i = 0; i < 8; i++) env[opOffset(k) + i] = A[opOffset(k) + i];
-  addPatch(newPatch(setVoiceName(env, `${bn} ${an}env`), src + " (B with A's envelopes)"), true);
+  addPatch(newPatch(setVoiceName(env, `${bn} ${an}env`), src + " (B with A's envelopes)", { rom }), true);
   const full = new Uint8Array(A);                             // A with a quiet octave below on OP5
   full[opOffset(5) + FP.OL] = Math.max(full[opOffset(5) + FP.OL], 60);
   full[opOffset(5) + FP.FC] = 0;
   full[opOffset(5) + FP.MODE] = 0;
-  addPatch(newPatch(setVoiceName(full, `${an} +oct`), src + " (A with an octave below)"), true);
+  addPatch(newPatch(setVoiceName(full, `${an} +oct`), src + " (A with an octave below)", { rom }), true);
   log(`made 7 hybrids from ${voiceName(A)} and ${voiceName(B)}`);
   renderList();
 }
@@ -185,7 +189,7 @@ function duplicateVary() {
   }
   if (rand() < 0.3) v[FP.FB] = clampByte(FP.FB, v[FP.FB] + (rand() < 0.5 ? -1 : 1));
   setVoiceName(v, (p.name.replace(/\+*$/, "") + "+").slice(0, 10));
-  const i = addPatch(newPatch(v, `varied from ${p.name} by ${amt}`));
+  const i = addPatch(newPatch(v, `varied from ${p.name} by ${amt}`, { rom: p.rom }));
   select(i, "varied");
 }
 function clampByte(idx, v) { return Math.max(0, Math.min(byteMax(idx), v)); }
@@ -198,7 +202,7 @@ function morphUpdate() {
 }
 function morphKeep() {
   if (!S.morphBase) return;
-  const i = addPatch(newPatch(S.morphBase, `morph of ${S.patches[S.a].name} → ${S.patches[S.b].name} at ${$("morph").value}%`));
+  const i = addPatch(newPatch(S.morphBase, `morph of ${S.patches[S.a].name} → ${S.patches[S.b].name} at ${$("morph").value}%`, { rom: derivedFrom([S.patches[S.a], S.patches[S.b]]) }));
   select(i, "kept");
 }
 
@@ -256,22 +260,43 @@ $("exportmark").addEventListener("change", () => { const p = current(); if (p) {
 
 // ---------------------------------------------------------------- session: autosave, export, import, .syx
 let saveTimer = 0;
-function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(STORE, JSON.stringify(sessionObject())); } catch {} }, 300); }
-function sessionObject() {
-  return { app: "FuMi-1 bench", version: 1, date: new Date().toISOString(), a: S.a, b: S.b, cur: S.cur,
-           patches: S.patches.map((p) => ({ id: p.id, name: p.name, source: p.source, packed: Array.from(pack(p.voice)), rating: p.rating, notes: p.notes, exp: p.exp })),
+function autosave() { clearTimeout(saveTimer); saveTimer = setTimeout(() => { try { localStorage.setItem(STORE, JSON.stringify(sessionObject(true))); } catch {} }, 300); }
+function sessionObject(local) {                               // local: the browser's own copy keeps every byte
+  // patches from someone else's .syx (and anything made from them) go without their bytes: a fingerprint,
+  // the name, the notes and the rating (session.js). The file goes into the repo; ROM data must not.
+  return { app: "FuMi-1 bench", version: 2, date: new Date().toISOString(), a: S.a, b: S.b, cur: S.cur,
+           patches: serialize(S.patches.map((p) => ({ ...p, packed: p.pending ? p.packed : pack(p.voice) })), !!local),
            params: Object.fromEntries(PARAMS.map((x) => [x.name, x.value])), history: S.history.slice(-500) };
 }
-function loadSession(o) {
+function fromSerialized(list, sourceTag) {
+  return deserialize(list).map((d) => {
+    const voice = d.packed ? unpack(d.packed) : initVoice();
+    const p = newPatch(voice, d.source || "session", { id: d.id, name: d.name, rating: d.rating, notes: d.notes, exp: d.exp, rom: d.rom, pending: d.pending, fp: d.fp });
+    if (sourceTag) p.source = `${p.source} (${sourceTag})`;
+    p.notes = { attack: "", body: "", tail: "", gliss: "", registers: "", free: "", ...p.notes };
+    return p;
+  });
+}
+function loadSession(o, merge) {
   if (!o || !Array.isArray(o.patches)) throw new Error("not a bench session");
-  S.patches = o.patches.map((p) => newPatch(unpack(Uint8Array.from(p.packed)), p.source || "session", { id: p.id, name: p.name, rating: p.rating || 0, notes: p.notes || {}, exp: !!p.exp }));
-  S.patches.forEach((p) => { p.notes = { attack: "", body: "", tail: "", gliss: "", registers: "", free: "", ...p.notes }; });
-  S.a = o.a ?? -1; S.b = o.b ?? -1;
-  S.history = o.history || [];
+  const list = fromSerialized(o.patches, merge ? "imported" : "");
+  if (merge) {                                               // import adds; it never throws the current work away
+    const have = new Set(S.patches.map((p) => p.id));
+    for (const p of list) if (!have.has(p.id)) S.patches.push(p);
+  } else {
+    S.patches = list;
+    S.a = o.a ?? -1; S.b = o.b ?? -1;
+    S.history = o.history || [];
+  }
   $("aname").textContent = S.a >= 0 ? S.patches[S.a].name : "—";
   $("bname").textContent = S.b >= 0 ? S.patches[S.b].name : "—";
   renderList();
-  if (o.cur >= 0 && o.cur < S.patches.length) select(o.cur);
+  if (!merge && o.cur >= 0 && o.cur < S.patches.length && !S.patches[o.cur].pending) select(o.cur);
+}
+// voices just loaded from a .syx: pending patches (from an earlier session) get their bytes back
+function reattachVoices(voices) {
+  const n = reattach(S.patches, voices.map((v) => ({ name: v.name, packed: v.packed })));
+  if (n) { S.patches.forEach((p) => { if (!p.pending && p.packed && p.fp) p.voice = unpack(p.packed); }); log(`${n} patches from the last session got their bytes back`); }
 }
 function download(name, bytes, type) {
   const a = document.createElement("a");
@@ -289,7 +314,7 @@ async function exportSession() {
   } catch { log("session downloaded (no local server: run web/bench/serve.py to keep it in the repo)"); }
 }
 function exportSyx() {
-  const list = S.patches.filter((p) => p.exp);
+  const list = S.patches.filter((p) => p.exp && !p.pending);
   if (!list.length) { alert("Tick 'export to .syx' on the patches to take to the FM-1 (up to 32)."); return; }
   download("fumi-finalists.syx", makeBank(list.slice(0, 32).map((p) => pack(p.voice))), "application/octet-stream");
   log(`exported ${Math.min(32, list.length)} patches as a 32-voice bank`);
@@ -298,7 +323,8 @@ async function loadSyxFiles(files) {
   for (const f of files) {
     try {
       const voices = parseSyx(new Uint8Array(await f.arrayBuffer()), f.name);
-      voices.forEach((v) => addPatch(newPatch(v.voice, f.name), true));
+      reattachVoices(voices);
+      voices.forEach((v) => addPatch(newPatch(v.voice, f.name, { rom: true }), true));
       log(`loaded ${voices.length} voices from ${f.name}`);
     } catch (e) { log(`refused ${f.name}: ${e.message}`); alert(e.message); }
   }
@@ -312,7 +338,7 @@ async function loadRefs() {
     const list = await r.json();
     for (const name of list.syx) {
       const b = new Uint8Array(await (await fetch(`/refs/${encodeURIComponent(name)}`)).arrayBuffer());
-      try { parseSyx(b, name).forEach((v) => addPatch(newPatch(v.voice, name), true)); log(`loaded ${name}`); }
+      try { const vs = parseSyx(b, name); reattachVoices(vs); vs.forEach((v) => addPatch(newPatch(v.voice, name, { rom: true }), true)); log(`loaded ${name}`); }
       catch (e) { log(`refused ${name}: ${e.message}`); }
     }
     renderClips(list.audio);
@@ -446,7 +472,7 @@ document.querySelectorAll(".phrase").forEach((b) => b.addEventListener("click", 
 $("phrasestop").addEventListener("click", phraseStop);
 
 // ---------------------------------------------------------------- reference clips
-let clipSrc = null, clipGain = null;
+let clipSrc = null, clipGain = null, clipRms = 0, engineRms = 0.02;
 function renderClips(names) {
   const box = $("clips");
   box.innerHTML = "";
@@ -477,18 +503,24 @@ async function playClip(name, from, to) {
   const ch = buf.getChannelData(0), i0 = Math.floor(a * buf.sampleRate), i1 = Math.floor(b * buf.sampleRate);
   let acc = 0;
   for (let i = i0; i < i1; i++) acc += ch[i] * ch[i];
-  const rms = Math.sqrt(acc / Math.max(1, i1 - i0)) || 1e-4;
+  clipRms = Math.sqrt(acc / Math.max(1, i1 - i0)) || 1e-4;
   clipGain = ac.createGain();
-  clipGain.gain.value = Math.min(8, (0.1 * (+$("cliplevel").value / 100)) / rms);
+  clipGain.gain.value = clipGainValue();
   clipSrc = ac.createBufferSource();
   clipSrc.buffer = buf;
   clipSrc.connect(clipGain).connect(ac.destination);
   clipSrc.start(0, a, b - a);
   log(`clip ${name} ${a.toFixed(1)}–${b.toFixed(1)} s, gain ${(20 * Math.log10(clipGain.gain.value)).toFixed(1)} dB`);
 }
+// the clip's RMS is brought to the engine's RMS over its recent playing (a running average of the frames
+// that had sound), the slider an offset of -20 .. +20 dB around that: the same loudness, by ear's measure
+function clipGainValue() {
+  const offset = Math.pow(10, ((+$("cliplevel").value - 50) / 50 * 20) / 20);
+  return Math.min(16, (engineRms / (clipRms || 1e-4)) * offset);
+}
 function clipStop() { try { clipSrc?.stop(); } catch {} clipSrc = null; }
 $("clipstop").addEventListener("click", clipStop);
-$("cliplevel").addEventListener("input", () => { if (clipGain) clipGain.gain.value *= 1; });
+$("cliplevel").addEventListener("input", () => { if (clipGain) clipGain.gain.value = clipGainValue(); });
 
 // ---------------------------------------------------------------- MIDI
 async function midiSetup() {
@@ -531,6 +563,7 @@ function onFrame(m) {
   $("meter").style.width = `${Math.max(0, Math.min(100, (db + 60) / 60 * 100))}%`;
   $("meter").classList.toggle("hot", db > -3);
   $("bendv").textContent = Math.abs(m.bend) > 0.5 ? `bend ${m.bend > 0 ? "+" : ""}${m.bend.toFixed(0)} c` : "";
+  if (m.rms > 0.002) engineRms += (m.rms - engineRms) * 0.05;   // the engine's loudness while it plays (clips follow it)
   if (m.load !== undefined) $("cpu").textContent = `${m.load}% of this computer, ${m.nvoices} voices`;
   PARAMS.forEach((p) => { p.value = m.params[p.p]; });
   syncControls();
@@ -592,7 +625,7 @@ async function switchOn() {
       const builtins = S.patches.splice(0);
       try { loadSession(saved); log(`restored the last session (${S.patches.length} patches)`); }
       catch { S.patches = builtins; }
-      if (!S.patches.length) S.patches = builtins;
+      for (const b of builtins) if (!S.patches.some((p) => p.source === b.source && p.name === b.name)) S.patches.push(b);
     }
     renderList();
     if (S.cur < 0 && S.patches.length) select(0, "to start");
@@ -614,10 +647,10 @@ $("syxfile").addEventListener("change", (e) => loadSyxFiles([...e.target.files])
 $("refsload").addEventListener("click", loadRefs);
 $("hybrids").addEventListener("click", hybrids);
 $("dup").addEventListener("click", duplicateVary);
-$("savecur").addEventListener("click", () => { const p = current(); if (p) { const i = addPatch(newPatch(p.voice, `kept from ${p.name}`)); select(i, "kept"); } });
+$("savecur").addEventListener("click", () => { const p = current(); if (p) { const i = addPatch(newPatch(p.voice, `kept from ${p.name}`, { rom: p.rom })); select(i, "kept"); } });
 $("exportjson").addEventListener("click", exportSession);
 $("importjson").addEventListener("click", () => $("jsonfile").click());
-$("jsonfile").addEventListener("change", async (e) => { try { loadSession(JSON.parse(await e.target.files[0].text())); log("session imported"); } catch (x) { alert(x.message); } });
+$("jsonfile").addEventListener("change", async (e) => { try { loadSession(JSON.parse(await e.target.files[0].text()), true); log("session imported (added to this one)"); autosave(); } catch (x) { alert(x.message); } });
 $("exportsyx").addEventListener("click", exportSyx);
 $("abtoggle").addEventListener("click", abToggle);
 $("blind").addEventListener("click", blindStart);

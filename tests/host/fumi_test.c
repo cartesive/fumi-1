@@ -335,17 +335,75 @@ int main(void)
     fm_set(P_YOIN, 0);
     run(0, 8192);
 
-    /* cost: eight voices with reverb, one second, host time */
+    /* keyboard scaling: the built-in koto (rate and level scaling on its carriers) decays faster at the top
+     * of the range than at the bottom; a constant note number into the FM6 core would make them identical */
+    fm_set(P_VOICE, 0);
+    fm_set(P_YOIN, 100);
+    run(0, 256);
+    {
+        double lo, hi;
+        fm_key(0, 1);
+        run(0, 44032 + 11008);
+        lo = db(peak_of(44032, 44032 + 11008));
+        fm_key(0, 0);
+        fm_panic();
+        run(0, 2048);
+        fm_key(15, 1);
+        run(0, 44032 + 11008);
+        hi = db(peak_of(44032, 44032 + 11008));
+        fm_key(15, 0);
+        fm_panic();
+        run(0, 2048);
+        printf("  koto a second in: key 1 %.1f dB, key 16 %.1f dB\n", lo, hi);
+        CHECK("the top key has decayed at least 6 dB more than the bottom key a second in", lo - hi > 6.0);
+    }
+    fm_set(P_YOIN, 0);
+    {
+        uint8_t pk[128];
+        sustain_patch(pk, 99);
+        fm_patch_set(pk);
+        run(0, 256);
+    }
+
+    /* the A reference: 430 Hz puts 三 at 215 Hz */
+    fm_set(P_A4, 430);
+    fm_key(5, 1);
+    run(0, 22016);
+    CHECK_NEAR("A = 430: 三 at 1本 = 215 Hz", tu_yin(buf + 11000, 8000, 44100.0), 215.0, 0.3);
+    fm_key(5, 0);
+    fm_set(P_A4, 440);
+    run(0, 8192);
+    fm_note(FM_NOTE_ID, 1, 0.0f);
+    fm_set(P_A4, 430);
+    run(0, 22016);
+    CHECK_NEAR("a note by absolute pitch ignores the A reference", tu_yin(buf + 11000, 8000, 44100.0), 440.0, 0.5);
+    fm_note(FM_NOTE_ID, 0, 0.0f);
+    fm_set(P_A4, 440);
+    run(0, 8192);
+
+    /* cost and headroom: the six-operator koto, eight voices held, reverb; the pre-clip peak (fm_peak) stays
+     * inside what the soft clip handles gracefully. The device figure comes from plat_cpu_pct() at M4 */
+    fm_set(P_VOICE, 0);
     fm_set(P_REVERB, 50);
+    fm_set(P_LEVEL, 80);
+    run(0, 256);
     for (i = 0; i < 8; i++)
         fm_key(i, 1);
     {
         clock_t t0 = clock();
-        run(0, 44032);
+        float pre = 0;
+        int k;
+        for (k = 0; k < 44032; k += 256) {
+            run(k, 256);
+            if (fm_peak > pre)
+                pre = fm_peak;
+        }
         {
             double s = (double)(clock() - t0) / CLOCKS_PER_SEC;
-            printf("  cost: 8 voices + reverb render 1 s in %.3f s of host time\n", s);
+            printf("  cost: KOTO A x 8 voices + reverb: 1 s in %.4f s of host time (%.0f ns a frame); pre-clip peak %.2f\n", s, s * 1e9 / 44032.0, (double)pre);
             CHECK("renders faster than real time on the host", s < 1.0);
+            CHECK("pre-clip peak of eight koto attacks at level 80 stays under 2 (the soft clip rounds the rest)", pre < 2.0f);
+            CHECK("and they are loud enough to matter", pre > 0.2f);
         }
     }
     for (i = 0; i < 8; i++)

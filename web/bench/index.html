@@ -26,6 +26,7 @@ section { background: var(--card); border: 1px solid var(--rule); border-radius:
 #patches { display: flex; flex-direction: column; gap: .35rem; max-height: 70vh; overflow: auto; }
 .patch { display: grid; grid-template-columns: 1fr auto; gap: .2rem .5rem; align-items: center; padding: .35rem .5rem; border: 1px solid var(--rule); border-radius: 8px; cursor: pointer; }
 .patch.cur { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.patch.pending { opacity: .55; }
 .patch .name { font-weight: 600; }
 .patch .src { color: var(--muted); font-size: .8rem; grid-column: 1 / -1; }
 .patch .tag { font-size: .75rem; padding: 0 .4em; border-radius: 4px; background: var(--accent2); color: #fff; margin-left: .3em; }
@@ -177,8 +178,8 @@ kbd { font: 600 .8em ui-monospace, Menlo, monospace; background: var(--ground); 
 
   <div>
     <section>
-      <h2>Reference clips <span class="hint">(refs/, level-matched)</span></h2>
-      <div class="row"><label>clip level <input type="range" id="cliplevel" min="0" max="100" value="60"></label> <button id="clipstop">Stop</button></div>
+      <h2>Reference clips <span class="hint">(refs/, matched to the engine's loudness)</span></h2>
+      <div class="row"><label>clip ±20 dB <input type="range" id="cliplevel" min="0" max="100" value="50"></label> <button id="clipstop">Stop</button></div>
       <div id="clips"></div>
     </section>
     <section>

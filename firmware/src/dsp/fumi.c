@@ -183,6 +183,7 @@ static smooth_t level_sm;
 static float level_cur;
 static float yo_mult;                             /* 余韻: the multiplier per sample after key-up */
 static float k_fast, k_slide;                     /* the voice smoother's coefficients: 12 ms, the slide time */
+static float a4_cents;                            /* the A reference as an offset: 1200 log2(A / 440) */
 static float hp_a, hp_s, lp_a, lp_s1, lp_s2, warm_s, char_amt, rev_send;
 static float mix[BLK];
 
@@ -205,20 +206,21 @@ static void tuning_from_params(void)
     tun.octave = (int8_t)par[P_OCTAVE];
     for (i = 0; i < TN_NPC; i++)
         tun.user[i] = (float)par[P_USER0 + i];
+    a4_cents = 1200.0f * fm_log2f(tun.a4 * (1.0f / 440.0f));
 }
 
 /* the pitch of a key id (white, black in upper-row mode) and the next scale note above it */
 static float key_cents(int id, float *next_up)
 {
-    if (id < FM_NWHITE) {
+    if (id < FM_NWHITE) {                          /* the keys follow the A reference; absolute notes (MIDI, the bench) do not */
         float c = tuning_white_cents(&tun, id);
         *next_up = (id < FM_NWHITE - 1 ? tuning_white_cents(&tun, id + 1) : c + 100.0f) - c;
-        return c;
+        return c + a4_cents;
     }
     if (id < FM_NKEY) {
         float c = tuning_black_cents(&tun, id - FM_NWHITE);
         *next_up = 100.0f;
-        return c;
+        return c + a4_cents;
     }
     *next_up = 100.0f;
     return 0.0f;
@@ -285,6 +287,10 @@ static void pluck(int i, int id, float cents, float next_up, int fresh)
 {
     voice_t *v = &vc[i];
     int vel = orn[ORN_STRONG] ? 127 : 100;
+    /* the nearest MIDI note of the pitch: the FM6 core's keyboard level and rate scaling and its detune curve
+     * are set from it at note-on, as on the DX7 (the pitch itself comes from the cents, per block) */
+    int mn = (int)fm_floorf((cents + 6900.0f) * 0.01f + 0.5f);
+    mn = mn < 0 ? 0 : mn > 127 ? 127 : mn;
     if (fresh) {
         v->dc = 0.0f;
         v->g = 0.0f;
@@ -301,7 +307,7 @@ static void pluck(int i, int id, float cents, float next_up, int fresh)
     v->live = 1;
     v->vel = (uint8_t)vel;
     v->order = ++order_n;
-    fm6_note_init(&v->n, patch, 60, vel, fresh);
+    fm6_note_init(&v->n, patch, mn, vel, fresh);
     fm6_lfo_key(&plfo);
     bend_voice = i;
     bend_targets();
@@ -682,7 +688,7 @@ static void render_voices(void)
             v->yo_g *= mb;
             (void)m;
         }
-        g1 = 0.25f * v->yo_g;
+        g1 = 0.18f * v->yo_g;                    /* a full carrier = 0.36; eight koto attacks at once reach the soft clip gently */
         dg = (g1 - g0) * (1.0f / (float)BLK);
 #ifdef FM_NO_SMOOTH
         g0 = g1;
@@ -738,7 +744,7 @@ static void render_block(int32_t *out, float gain)
         out[2 * k] = (int32_t)(fm_tanhf(l) * 8300000.0f);
         out[2 * k + 1] = (int32_t)(fm_tanhf(r) * 8300000.0f);
     }
-    fm_peak = pk > 1.0f ? 1.0f : pk;
+    fm_peak = pk;                                  /* before the soft clip: above 1 means it is working */
 }
 
 void fm_render(int32_t *out, uint32_t n, uint32_t gain_q12)

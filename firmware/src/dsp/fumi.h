@@ -70,7 +70,7 @@ void fm_midi_out(uint32_t st, uint32_t d1, uint32_t d2);
 /* state for the screen (UI) */
 extern volatile float fm_key_level[FM_NKEY];     /* each key's voice level, 0..1 (lights) */
 extern volatile float fm_bend_cents;             /* the bend now */
-extern volatile float fm_peak;                   /* output peak of the last block, 0..1 */
+extern volatile float fm_peak;                   /* output peak of the last block before the soft clip (1 = full scale) */
 extern volatile uint8_t fm_nvoices;              /* voices sounding */
 extern volatile char fm_patch_label[11];         /* the current patch's name */
 extern volatile uint8_t fm_patch_custom;         /* 1: a patch sent by fm_patch_set, not a P_VOICE slot */
