@@ -1,0 +1,20 @@
+# the HOME screen after PRESETS clicks shows the instrument that sounds (1.0.3: a quick run of clicks, or one
+# click to a name with the same first letter, left the old name beside the new kanji). The oracle: the same
+# screen after a forced redraw (another page and back).
+wait 300
+turn PRESET 1 250
+wait 1500
+expect par7 1
+snap one
+tap FX
+tap HOME
+wait 100
+expect screen one
+turn PRESET 2 250
+wait 1500
+expect par7 3
+snap three
+tap FX
+tap HOME
+wait 100
+expect screen three

@@ -397,7 +397,10 @@ static void draw_main(void)
         h = hash(h, (uint32_t)(fm_key_level[s] * 24.0f));
     h = hash(hash(h, (uint32_t)proj.par[P_HON] | (uint32_t)proj.par[P_VOICE] << 8 | (uint32_t)proj.par[P_TUNING] << 16 |
                           (uint32_t)proj.par[P_SCALE] << 20 | (uint32_t)(proj.par[P_OCTAVE] + 1) << 24),
-             (uint32_t)(fm_bend_cents * 4.0f + 1000.0f) | (uint32_t)fm_patch_custom << 16 | (uint32_t)fm_patch_label[0] << 20);
+             (uint32_t)(fm_bend_cents * 4.0f + 1000.0f) | (uint32_t)fm_patch_custom << 16);
+    for (s = 0; s < 10u && fm_patch_label[s]; s++)   /* the whole name: the render adopts a patch a frame after the
+                                                      * slot changes, and Sho and Shakuhachi start alike (1.0.3) */
+        h = hash(h, (uint32_t)fm_patch_label[s] | s << 8);
     if (h == ui.sig[1])
         return;
     ui.sig[1] = h;

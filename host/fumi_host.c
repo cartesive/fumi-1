@@ -17,10 +17,11 @@
  *   wav FILE | wavstop           start / stop recording the output
  *   peakreset                    restart the output peak (expect peak_db_min / peak_db_max)
  *   shot FILE.png                save the screen
+ *   snap NAME                    keep a copy of the screen (expect screen NAME: the screen is the same again)
  *   leds                         print the lit buttons and keys
  *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
  *     WHAT: view parN (fumi.h P_*) dirty store_writes midi_out nvoices bend10 (cents x 10) keylevelK (x 100)
- *           custom peak_db_max peak_db_min
+ *           custom peak_db_max peak_db_min screen
  *   reboot                       re-run boot from the simulated flash (persistence test)
  */
 #define OM_HOST 1
@@ -225,6 +226,18 @@ static void png_write(const char *path)
     fclose(f);
 }
 
+#define NSNAP 4
+static uint16_t snap_fb[NSNAP][240 * 240];
+static char snap_name[NSNAP][32];
+static int snap_find(const char *name)
+{
+    int i;
+    for (i = 0; i < NSNAP; i++)
+        if (!strcmp(snap_name[i], name))
+            return i;
+    return -1;
+}
+
 static FILE *wav;
 static uint32_t wav_frames;
 static float peak_out;
@@ -366,7 +379,17 @@ static int expect(const char *what, const char *val)
         got = proj.par[atoi(what + 3)];
     else if (!strncmp(what, "keylevel", 8))        /* keylevelK: key K's level x 100 */
         got = (int)(fm_key_level[atoi(what + 8)] * 100.0f);
-    else if (!strcmp(what, "peak_db_max") || !strcmp(what, "peak_db_min")) {
+    else if (!strcmp(what, "screen")) {            /* the screen is the one kept by `snap VAL` */
+        int i = snap_find(val), k, diff = 0;
+        if (i < 0) {
+            printf("FAIL no snap %s\n", val);
+            return 1;
+        }
+        for (k = 0; k < 240 * 240; k++)
+            diff += fb[k] != snap_fb[i][k];
+        printf("%s screen %s (%d pixels differ)\n", diff ? "FAIL" : "  ok", val, diff);
+        return diff != 0;
+    } else if (!strcmp(what, "peak_db_max") || !strcmp(what, "peak_db_min")) {
         double db = 20.0 * log10(peak_out > 1e-9f ? peak_out : 1e-9f);
         int bad = what[8] == 'm' && what[9] == 'a' ? db > atof(val) : db < atof(val);
         printf("%s peak %.1f dBFS (%s %s)\n", bad ? "FAIL" : "  ok", db, what + 8, val);
@@ -492,6 +515,17 @@ int main(int argc, char **argv)
         else if (!strcmp(cmd, "shot")) {
             snprintf(out, sizeof out, "%s/%s", dir, a);
             png_write(out);
+        } else if (!strcmp(cmd, "snap")) {
+            int i = snap_find(a);
+            if (i < 0)
+                for (i = 0; i < NSNAP && snap_name[i][0]; i++)
+                    ;
+            if (i >= NSNAP) {
+                printf("line %d: too many snaps\n", lineno);
+                return 2;
+            }
+            snprintf(snap_name[i], sizeof snap_name[i], "%s", a);
+            memcpy(snap_fb[i], fb, sizeof fb);
         } else if (!strcmp(cmd, "leds")) {
             int i;
             printf("  leds: buttons");
