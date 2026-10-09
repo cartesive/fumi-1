@@ -71,18 +71,20 @@ ul.pages li { margin: 0 0 .4rem; }
 <p class="lede">Custom firmware for the M-VAVE FM-1, inspired by the Suiko ST-50 (水光トレーナー), the Japanese
 poetry-accompaniment instrument. The sixteen white keys are the ST-50's lower row, mi fa la ti do three times
 and a top mi; the black keys its upper row or koto ornaments; the key is set in 本数; the tuning switches
-between 平均律 and the ST-50's 純正律 as measured from recordings; and the sounds are a koto, a second koto,
-sho, shakuhachi, two more flutes and a taiko, each with its name in kanji on the screen.</p>
+between 平均律 and the ST-50's 純正律 as measured from recordings; the sounds are a koto, a second koto,
+sho, shakuhachi, two more flutes, a taiko and two wood blocks, each with its name in kanji on the screen;
+and REC is a looper, as the ST-50's 自動伴奏 was: play a phrase, loop it, play over it.</p>
 <div class="shots">
   <img src="img/screen-home.png" width="240" height="240" alt="FuMi-1's screen: 1本, A3, SUIKO tuning, the in scale, and the koto 琴 large">
   <img src="img/screen-play.png" width="240" height="240" alt="FuMi-1's screen with two keys sounding">
   <img src="img/screen-shakuhachi.png" width="240" height="240" alt="FuMi-1's screen on the tuning page with Shakuhachi 尺八">
   <img src="img/screen-tuning.png" width="240" height="240" alt="FuMi-1's tuning page: SUIKO, depth, fine, A = 440">
+  <img src="img/screen-loop.png" width="240" height="240" alt="FuMi-1's screen with a loop overdubbing: the DUB tag and the loop bar under the keys">
 </div>
-<div class="status"><strong>Version __VERSION__, the first release.</strong> It installs and uninstalls the way
-Felucca, X0X and FoMni do, and the installer can put M-VAVE's own firmware back. Installing is at your own
-risk; read the notes on the install page first. Your FM-1 should be on M-VAVE's V15 before any custom
-firmware.</div>
+<div class="status"><strong>Version __VERSION__.</strong> It installs and uninstalls the way Felucca, X0X and
+FoMni do, and the installer can put M-VAVE's own firmware back. Installing is at your own risk; read the
+notes on the install page first. Your FM-1 should be on M-VAVE's V15 before any custom firmware. FuMi-1 is
+quiet on purpose at low MASTER settings: turn MASTER up.</div>
 <nav class="ways" aria-label="Get FuMi-1">
   <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0; no FM-1 needed.</span></a>
   <a href="install/"><strong>Install</strong><span>From Chrome or Edge, with the FM-1 connected by USB. Nothing to install on the computer.</span></a>
@@ -96,12 +98,15 @@ firmware.</div>
 <tr><td>White keys</td><td>mi fa la ti do × 3 and a top mi. The tonics (keys 1, 6, 11, 16) are lit. 三 is key 6.</td></tr>
 <tr><td>Black keys</td><td>The upper row fa♯ sol ti♭ do♯ re, five per octave. SEQ switches them to ornaments: vibrato, trill, damp, strong pluck.</td></tr>
 <tr><td>SELECT</td><td>本数: 水4, 水3, 水2, 水1, 1 … 12. At 1本, 三 = A3.</td></tr>
-<tr><td>PRESETS</td><td>The instrument: Koto 琴, Koto II 箏, Sho 笙, Shakuhachi 尺八, Dragon Flt 龍笛, Bamboo Flt 篠笛, Taiko 太鼓, and FuMi's own Koto Pluck 爪音, Koto Ring 響, Koto Warm 名残, Harp 箜篌.</td></tr>
+<tr><td>PRESETS</td><td>The instrument: Koto 琴, Koto II 箏, Sho 笙, Shakuhachi 尺八, Dragon Flt 龍笛, Bamboo Flt 篠笛, Taiko 太鼓, Hyoshigi 拍子木, Mokugyo 木魚, Koto Pluck 爪音, Koto Ring 響, Koto Warm 名残, Harp 箜篌.</td></tr>
 <tr><td>ALGORITHM</td><td>The scale: IN 陰, YŌ 陽, MIN'YŌ 民謡.</td></tr>
 <tr><td>OCT− · OCT+</td><td>With a note held: a sprung bend down or up (semitone, whole tone or the next scale note). With nothing held: the octave. Both held 5 s: update mode.</td></tr>
 <tr><td>LFO · ARP · GLO</td><td>Vibrato, trill, mono (slide between notes).</td></tr>
 <tr><td>SEL</td><td>Tap: 平均律 ↔ 純正律. Hold: the tuning page (EQUAL, SUIKO as measured, KOTO pure fifths, USER; depth; 微調; A = 430–445).</td></tr>
 <tr><td>KNOB 1–4</td><td>The page's four values. HOME: 余韻, trill rate, vibrato depth, reverb. FX: low cut, high cut, character, reverb size. EDIT: bend target, bend down, bend time, slide time.</td></tr>
+<tr><td>REC</td><td>The looper. Tap: arm, and the first key starts the loop. Tap again: the loop closes where you are and plays (or it closes itself at 32 beats of 60 BPM). While it plays: overdub on / off. Hold a second: clear.</td></tr>
+<tr><td>PLAY</td><td>Stop / start the loop from the top. Hold a second: undo the last layer.</td></tr>
+<tr><td>ENV</td><td>The Loop page: BPM, length in beats, click.</td></tr>
 <tr><td>SAVE</td><td>Saves. FuMi-1 also saves by itself a few seconds after a change, once it's quiet.</td></tr>
 </table>
 <p>MIDI comes in over USB (chromatic) and goes out over USB. The patches are Yamaha DX7-format voices; the

@@ -70,7 +70,9 @@ All pitch maths in cents as floats: see `tuning-reference.md` for the formula (i
 | SEL | 調律: 平均律 / 純正律; hold for depth, 微調 | 調律 switch, 微調 |
 | SEQ | Black-key mode: upper row / ornaments | — |
 | FX, EDIT, HOME, SAVE | Pages | — |
-| ENV, PLAY, REC | Free (reserved for parked features) | — |
+| REC | The looper (1.0.4): tap: arm, the first key starts the loop; tap again: close, it plays; while playing: overdub on / off. Held 1 s: clear | 自動伴奏 記憶 (record) |
+| PLAY | Looper: stop / start from the top. Held 1 s: undo the top layer | 再生 / 停止 |
+| ENV | The Loop page: BPM, beats, click | — |
 
 **Bend:** role decided at the moment of pressing. With a note held, OCT+ glides the most recent note up to the target (semitone, whole tone or next scale note; about 90 ms up, 120 ms back, S-shaped) and holds until release; a tap is an up-and-back flick; OCT− is a small drop. Both held together stays reserved for update mode. **Key slide** is a per-voice option (on for shakuhachi, off for koto). A control smoother still sits under everything, and a click regression test guards it (file 04).
 

@@ -3,6 +3,29 @@
 Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 reports the identity
 (`python3 tools/fm1_install.py --info`).
 
+## 1.0.4 (10 Oct 2026) — `FM-1_7010004`
+
+- **A looper on REC and PLAY.** Tap REC to arm; the first key you play starts the loop; tap REC again to
+  close it where you are (or it closes itself at the ruler's length, 32 beats at 60 BPM by default) and
+  it plays; REC while it plays overdubs a new layer, REC again ends the layer. PLAY stops and starts from
+  the top; hold PLAY a second to undo the top layer; hold REC a second to clear. Keys, the ornament keys
+  and the bend buttons are recorded with their timing; knobs and MASTER are not, so the left hand stays
+  free. The loop stores keys, not pitches: change 本数 or 調律 and the loop follows. Notes ringing across
+  the join keep ringing. ENV is the Loop page: BPM (30–120), length in beats (8–64) and a quiet click
+  (off by default). REC lights red while recording and blinks while armed; PLAY lights while the loop
+  plays; a thin bar under the keys shows where the loop is. One instrument at a time; the loop lives in
+  memory until the FM-1 is switched off. Nothing autosaves while a loop runs.
+- **Two wood instruments, after Taiko:** Hyoshigi 拍子木, two hardwood sticks struck together, a dry crack
+  the same on every key; and Mokugyo 木魚, the wooden fish, a round pitched tok that follows the keys.
+  Both FuMi's own. The trill button rolls them.
+- **Shakuhachi replaced.** The owner's pick, PAN FL T A (AAAHGOOD.SYX, patches.fm), for the AirFltMal1
+  whose every note opened with a bright blast.
+- **Fixed: the wrong name on the screen.** Turning PRESETS to an instrument whose name starts like the
+  last one's (Koto → Koto II, Sho → Shakuhachi) could leave the old name beside the new kanji.
+- **Fixed: the host simulator did not build on Linux** (`clock_gettime` under `-std=c99`).
+- The saved setup has three new values, so the format changed: the first start of 1.0.4 begins from the
+  defaults (余韻 80, vibrato depth 80, reverb 55, Koto, 1本, SUIKO).
+
 ## 1.0.3 (10 Oct 2026) — `FM-1_7010003`
 
 - **Quieter again, by 18 dB.** The output is now 30 dB below 0.1 (`OUT_TRIM` 0.03125). Suiko is a gentle
