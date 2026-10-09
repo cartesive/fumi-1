@@ -103,7 +103,7 @@ def find_sections(x, min_sil_s, sil_db):
 def find_onsets(x, sec, sil_db):
     """Energy-rise onsets in a section: a jump of 12 dB within 20 ms on a 1 ms RMS envelope.
 
-    Returns [(onset_s, peak_s)] with the onset refined to the point 20 dB below the peak."""
+    Returns [(onset_s, attack_end_s, peak_s)] with the onset refined to the point 20 dB below the peak."""
     a, b = int(sec[0] * SR), int(sec[1] * SR)
     t, env = rms_envelope(x[a:b], 0.005, 0.001)
     e = db(env)
@@ -119,7 +119,10 @@ def find_onsets(x, sec, sil_db):
         peak = i + int(np.argmax(e[i:i + 250]))
         below = np.flatnonzero(e[max(0, i - 20):peak] < e[peak] - 20)
         onset = max(0, i - 20) + (below[-1] + 1 if len(below) else 0)
-        onsets.append((sec[0] + t[onset], sec[0] + t[peak]))
+        # The attack ends when the envelope first comes within 1 dB of its peak. A 5 ms RMS
+        # window ripples at the fundamental's period, so the exact peak sample is not reliable.
+        top = onset + int(np.argmax(e[onset:peak + 1] >= e[peak] - 1))
+        onsets.append((sec[0] + t[onset], sec[0] + t[top], sec[0] + t[peak]))
     return onsets
 
 
@@ -314,13 +317,13 @@ def analyse_notes(x, sections, track, sil_db, a4):
     notes = []
     for si, sec in enumerate(sections):
         onsets = find_onsets(x, sec, sil_db)
-        for j, (onset, peak) in enumerate(onsets):
+        for j, (onset, top, peak) in enumerate(onsets):
             end = onsets[j + 1][0] if j + 1 < len(onsets) else sec[1]
             if end - onset < MIN_NOTE_S:
                 continue
             f0 = note_pitch(track, onset, end)
             note = dict(section=si, onset=onset, length=end - onset, f0=f0,
-                        attack_ms=(peak - onset) * 1000, click=click_db(x, onset),
+                        attack_ms=(top - onset) * 1000, click=click_db(x, onset),
                         decay=decay_rates(x, peak, end))
             if np.isfinite(f0):
                 nearest, cents = cents_offset(np.array([f0]), a4)
@@ -387,21 +390,24 @@ def report_peaks(peaks):
 
 
 def report_notes(notes, t0):
-    lines = [f"## Isolated notes (at least {MIN_NOTE_S} s alone)", ""]
+    lines = [f"## Isolated notes (at least {MIN_NOTE_S} s alone)", "",
+             "Attack is from the onset (20 dB below the peak) to within 1 dB of the peak envelope.", ""]
     if not notes:
         return lines + ["None found.", ""]
-    lines += ["| Section | Onset | Length | Note | Cents | Attack (ms) | Click (dB) | Decay 0-200 ms (dB/s) | Decay 200-1000 ms (dB/s) |",
+    lines += ["| Section | Onset | Length | Note | Cents | Attack (ms) | Click (dB) | "
+              "Decay 0-200 ms (dB/s) | Decay 200-1000 ms (dB/s) |",
               "|---|---|---|---|---|---|---|---|---|"]
     for n in notes:
         lines.append(f"| {n['section']} | {t0 + n['onset']:.2f} | {n['length']:.2f} s | {n.get('name', 'n/a')} | "
                      f"{fmt(n.get('cents'))} | {n['attack_ms']:.1f} | {fmt(n['click'])} | "
                      f"{fmt(n['decay'][0])} | {fmt(n['decay'][1])} |")
-    lines += ["", summary_line(notes), "", "### Partials (dB relative to the strongest, window starting at onset + t)", "",
+    lines += ["", summary_line(notes), "",
+              "### Partials (dB relative to the strongest, window starting at onset + t)", "",
               "| Onset | Note | t (ms) | " + " | ".join(f"P{k}" for k in range(1, 9)) + " |",
               "|---|---|---|" + "---|" * 8]
     for n in notes:
         for ms, levels in n.get("partials", {}).items():
-            cells = " | ".join("-inf" if not np.isfinite(v) else f"{v:.0f}" for v in levels)
+            cells = " | ".join("-inf" if not np.isfinite(v) else f"{round(v, 1) + 0.0:.1f}" for v in levels)
             lines.append(f"| {t0 + n['onset']:.2f} | {n['name']} | {ms} | {cells} |")
     return lines + [""]
 
@@ -410,7 +416,8 @@ def summary_line(notes):
     def med(key):
         vals = np.array([key(n) for n in notes], dtype=float)
         return fmt(np.median(vals[np.isfinite(vals)])) if np.isfinite(vals).any() else "n/a"
-    return (f"Medians over {len(notes)} notes: attack {med(lambda n: n['attack_ms'])} ms, click {med(lambda n: n['click'])} dB, "
+    return (f"Medians over {len(notes)} notes: attack {med(lambda n: n['attack_ms'])} ms, "
+            f"click {med(lambda n: n['click'])} dB, "
             f"decay {med(lambda n: n['decay'][0])} dB/s then {med(lambda n: n['decay'][1])} dB/s.")
 
 
@@ -472,16 +479,18 @@ def selftest(args):
         notes = notes + [None] * (2 - len(notes))
     n1, n2 = notes[:2]
     if n1:
-        checks += [(abs(1200 * np.log2(n1["f0"] / 220.0)) < 1, f"note 1 pitch {n1['f0']:.3f} Hz, want 220 within 1 cent"),
+        checks += [(abs(1200 * np.log2(n1["f0"] / 220.0)) < 1,
+                    f"note 1 pitch {n1['f0']:.3f} Hz, want 220 within 1 cent"),
                    (n1["attack_ms"] < 10, f"note 1 attack {n1['attack_ms']:.1f} ms, want < 10"),
                    (n1["click"] > 5, f"note 1 click {n1['click']:.1f} dB, want > 5"),
                    (-34 < n1["decay"][0] < -22, f"note 1 decay {n1['decay'][0]:.1f} dB/s, want -22 to -34"),
                    (abs(n1["partials"][0][1] - n1["partials"][0][0]) < 2,
-                    f"note 1 partial 2 at {n1['partials'][0][1]:.1f} dB vs partial 1 at {n1['partials'][0][0]:.1f}, want within 2")]
+                    f"note 1 partial 2 at {n1['partials'][0][1]:.1f} dB vs partial 1 at "
+                    f"{n1['partials'][0][0]:.1f}, want within 2")]
     if n2:
         checks.append((n2.get("name") == "Bb3" and abs(n2["cents"] + 21) < 1,
                        f"note 2 is {n2.get('name')} {fmt(n2.get('cents'))} cents, want Bb3 -21 within 1 cent"))
-    print("\n## Selftest", "")
+    print("\n## Selftest\n")
     for ok, msg in checks:
         print(("PASS  " if ok else "FAIL  ") + msg)
     failed = [m for ok, m in checks if not ok]
