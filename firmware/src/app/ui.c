@@ -422,13 +422,7 @@ static void draw_main(void)
             cv_round(cx - 20, 14, 40, 6, 3, K_LINE);
             cv_round(bw < 0 ? cx + bw : cx, 14, (bw < 0 ? -bw : bw) + 4, 6, 3, K_KOTO);
         }
-        cv_text(240 - 12 - text_w(&FONT_B, (const char *)fm_patch_label), 4, &FONT_B, (const char *)fm_patch_label,
-                fm_patch_custom ? K_KOTO : K_TEXT);
-        if (!fm_patch_custom) {                 /* the instrument's Japanese name beneath, Suiko-style */
-            const char *ja = FM_PATCH_JA_LCD[proj.par[P_VOICE]];
-            cv_text(240 - 12 - text_w(&FONT_JP, ja), 21, &FONT_JP, ja, K_TEXT);
-        }
-        {
+        {   /* the tuning and the scale, top right */
             char line[40];
             int k = 0;
             const char *a = TN_NAME[proj.par[P_TUNING]], *b = SC_NAME[proj.par[P_SCALE]];
@@ -440,12 +434,21 @@ static void draw_main(void)
             while (*b)
                 line[k++] = *b++;
             line[k] = 0;
-            cv_text(240 - 12 - text_w(&FONT_XS, line), 39, &FONT_XS, line, K_DIM);
+            cv_text(240 - 12 - text_w(&FONT_XS, line), 6, &FONT_XS, line, K_DIM);
         }
     }
-    draw_keys(52, 56);
+    {   /* the instrument, large: its name at the left in the biggest face that fits, its kanji at the right
+         * (Suiko-style), both centred on the band y 38..90; a patch sent from outside has no kanji */
+        const char *name = (const char *)fm_patch_label, *ja = fm_patch_custom ? "" : FM_PATCH_JA_LCD[proj.par[P_VOICE]];
+        int32_t jw = *ja ? text_w(&FONT_JPL, ja) : 0, room = 240 - 24 - (jw ? jw + 10 : 0);
+        const felucca_font_t *f = text_w(&FONT_L, name) <= room ? &FONT_L : text_w(&FONT_M, name) <= room ? &FONT_M : &FONT_B;
+        cv_text(12, 64 - f->h / 2, f, name, fm_patch_custom ? K_KOTO : K_TEXT);
+        if (jw)
+            cv_text(240 - 12 - jw, 64 - FONT_JPL.h / 2, &FONT_JPL, ja, K_TEXT);
+    }
+    draw_keys(98, 22);
     for (i = 0; i < FM_NWHITE; i++)              /* the degree under each key, the tonics' row marked */
-        text_c(12 + i * 14, 112, &FONT_XS, DEG_NAME[i % 5], (i % 5) ? K_DIM : K_TEXT);
+        text_c(12 + i * 14, 124, &FONT_XS, DEG_NAME[i % 5], (i % 5) ? K_DIM : K_TEXT);
     cv_blit(0, MAIN_Y);
 }
 

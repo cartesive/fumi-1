@@ -26,7 +26,7 @@ render(256);
 check("silence at rest", render(1024) === 0);
 ex.web_note(5, 1, 0);                                   // A4 by pitch
 const pk = render(8192);
-check("a note by pitch sounds", pk > 0.02 && pk < 1);
+check("a note by pitch sounds", pk > 0.001 && pk < 1);
 check("one voice", ex.web_nvoices() === 1);
 ex.web_note(5, 0, 0);
 render(44100 * 4);                                      // 余韻 80: 2.4 s to -60 dB, the voice is freed at -80

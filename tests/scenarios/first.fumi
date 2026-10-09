@@ -63,7 +63,7 @@ tap SEQ
 wait 1500
 wavstop
 expect peak_db_max -0.1
-expect peak_db_min -30
+expect peak_db_min -70
 tap FX
 wait 50
 shot sound.png

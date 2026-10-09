@@ -16,7 +16,7 @@ FuMi lives in `firmware/src/app/` and `firmware/src/dsp/`.
 - **Install it** (Chrome or Edge, FM-1 on USB): <https://cartesive.github.io/fumi-1/install/>
 - **The audition bench**: <https://cartesive.github.io/fumi-1/bench/>
 
-**Status (10 Oct 2026):** version 1.0.2 (identity `FM-1_7010002`) runs on the owner's FM-1. It has the pitch
+**Status (10 Oct 2026):** version 1.0.3 (identity `FM-1_7010003`) runs on the owner's FM-1. It has the pitch
 core, the FM engine with eleven instruments, the app, the host simulator, the browser emulator, the audition
 bench and the web installer; the first flash (0.1) showed only that it was too loud and that PRESETS could
 skip a step, both fixed. Releases are listed in `docs/CHANGELOG.md`; the research and plan are in

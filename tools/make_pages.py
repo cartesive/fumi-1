@@ -74,8 +74,9 @@ and a top mi; the black keys its upper row or koto ornaments; the key is set in 
 between 平均律 and the ST-50's 純正律 as measured from recordings; and the sounds are a koto, a second koto,
 sho, shakuhachi, two more flutes and a taiko, each with its name in kanji on the screen.</p>
 <div class="shots">
-  <img src="img/screen-home.png" width="240" height="240" alt="FuMi-1's screen: 1本, A3, the koto 琴, SUIKO tuning, the in scale">
+  <img src="img/screen-home.png" width="240" height="240" alt="FuMi-1's screen: 1本, A3, SUIKO tuning, the in scale, and the koto 琴 large">
   <img src="img/screen-play.png" width="240" height="240" alt="FuMi-1's screen with two keys sounding">
+  <img src="img/screen-shakuhachi.png" width="240" height="240" alt="FuMi-1's screen on the tuning page with Shakuhachi 尺八">
   <img src="img/screen-tuning.png" width="240" height="240" alt="FuMi-1's tuning page: SUIKO, depth, fine, A = 440">
 </div>
 <div class="status"><strong>Version __VERSION__, the first release.</strong> It installs and uninstalls the way

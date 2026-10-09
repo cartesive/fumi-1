@@ -18,4 +18,4 @@ for (let i = 0; i < 400; i++) {
   for (const v of l) peak = Math.max(peak, Math.abs(v));
 }
 console.log("peak", peak.toFixed(3), "blits", ex.web_blits());
-process.exit(peak > 0.05 && peak < 1 ? 0 : 1);
+process.exit(peak > 0.002 && peak < 1 ? 0 : 1);

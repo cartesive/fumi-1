@@ -3,6 +3,14 @@
 Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 reports the identity
 (`python3 tools/fm1_install.py --info`).
 
+## 1.0.3 (10 Oct 2026) — `FM-1_7010003`
+
+- **Quieter again, by 18 dB.** The output is now 30 dB below 0.1 (`OUT_TRIM` 0.03125). Suiko is a gentle
+  instrument; MASTER and Level still work above this, so there is room to go up.
+- **The instrument fills the screen.** Its name in the largest face that fits, and its kanji at 48 pixels,
+  across the middle of the HOME screen; the key lights are a short strip beneath; the tuning and scale sit
+  top right. New screens on the site.
+
 ## 1.0.2 (10 Oct 2026) — `FM-1_7010002`
 
 The first version played on hardware, with the two things the first flash showed:

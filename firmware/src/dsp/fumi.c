@@ -181,8 +181,9 @@ static float vib_ph, vib_inc, vib_depth, vib_cur;
 static float trill_left, trill_period, trill_var;
 static uint32_t rnd = 0x1234567u;
 static smooth_t level_sm;
-#define OUT_TRIM 0.25f                             /* -12 dB at the output: 0.1 on the FM-1's speaker was far too loud
-                                                    * at the lowest MASTER setting (1.0.2) */
+#define OUT_TRIM 0.03125f                          /* -30 dB at the output. 0.1 was far too loud on the FM-1's speaker at the
+                                                    * lowest MASTER setting; -12 dB (1.0.2) still was: Suiko is a gentle
+                                                    * instrument (1.0.3). MASTER and Level work above this */
 static float level_cur;
 static float yo_mult;                             /* 余韻: the multiplier per sample after key-up */
 static float k_fast, k_slide;                     /* the voice smoother's coefficients: 12 ms, the slide time */
