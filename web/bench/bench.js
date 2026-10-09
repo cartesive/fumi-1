@@ -660,15 +660,23 @@ async function switchOn() {
       // the built-ins are always this build's: a saved copy with the same name gets the new bytes (notes and
       // rating stay; an edited built-in should have been kept as new)
       let updated = 0;
-      for (const b of builtins) {
+      const src = builtins[0]?.source;
+      const first = builtins.map((b) => {
         const old = S.patches.find((p) => p.source === b.source && p.name === b.name);
-        if (!old) S.patches.push(b);
-        else if (!old.voice.every((x, i) => x === b.voice[i])) { old.voice = new Uint8Array(b.voice); old.pending = false; updated++; }
-      }
+        if (!old) return b;
+        if (!old.voice.every((x, i) => x === b.voice[i])) { old.voice = new Uint8Array(b.voice); old.pending = false; updated++; }
+        return old;
+      });
+      // built-ins come first, in this build's order; a saved built-in this build no longer has is dropped
+      const gone = S.patches.filter((p) => p.source === src && !first.includes(p));
+      const [ao, bo, co] = [S.a, S.b, S.cur].map((i) => S.patches[i]);
+      S.patches = first.concat(S.patches.filter((p) => p.source !== src));
+      [S.a, S.b, S.cur] = [ao, bo, co].map((o) => (o ? S.patches.indexOf(o) : -1));
       if (updated) log(`${updated} built-in patch(es) updated to this build's version`);
+      if (gone.length) log(`dropped ${gone.map((p) => p.name).join(", ")}: not a built-in of this build`);
     }
     renderList();
-    if (S.cur < 0 && S.patches.length) select(0, "to start");
+    if (S.cur < 0 && S.patches.length) select(Math.min(S.patches.length - 1, PARAMS.find((p) => p.name === "Voice")?.value ?? 0), "to start");
     await loadRefs();
     midiSetup();
   } catch (err) {

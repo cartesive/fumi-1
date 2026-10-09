@@ -38,9 +38,9 @@ expect par6 0
 spin SELECT 3
 wait 50
 expect par0 7
-spin ALGO 1
+spin ALGO -1
 wait 50
-expect par7 1
+expect par7 3
 tap LFO
 wait 50
 expect par10 1
