@@ -39,13 +39,26 @@ static float peak_of(int from, int to)
     return pk;
 }
 static double db(float x) { return 20.0 * log10(x > 1e-9f ? (double)x : 1e-9); }
-static int koto_a(void)                           /* the slot of FuMi's own KOTO A, "Koto Pluck" (the owner's picks come first) */
+static int slot_of(const char *name)              /* a built-in instrument's slot by name; -1 if none */
 {
     int i;
     for (i = 0; i < fm_patch_count(); i++)
-        if (!strcmp(fm_patch_name(i), "Koto Pluck"))
+        if (!strcmp(fm_patch_name(i), name))
             return i;
-    return 0;
+    return -1;
+}
+static int koto_a(void)                           /* the slot of FuMi's own KOTO A, "Koto Pluck" (the owner's picks come first) */
+{
+    int i = slot_of("Koto Pluck");
+    return i < 0 ? 0 : i;
+}
+static int ms_to_db_below(int from, float pk, double d)   /* the first ms after `from` at which the 5 ms peak stays d dB under pk */
+{
+    int i;
+    for (i = from; i + 220 < 3 * 44100; i += 44)
+        if (db(peak_of(i, i + 220)) < db(pk) - d && db(peak_of(i, 3 * 44100 > i + 8820 ? i + 8820 : 3 * 44100)) < db(pk) - d)
+            return (i - from) / 44;
+    return -1;
 }
 static int onsets(int from, int to)               /* rises of 4 dB within 10 ms of the 5 ms RMS envelope: a koto
                                                    * decaying at the ST-50's -28 dB/s drops only 5-6 dB between
@@ -392,6 +405,47 @@ int main(void)
     fm_set(P_A4, 440);
     run(0, 8192);
 
+    /* the wood pair (1.0.4): 拍子木 Hyoshigi, two sticks, a crack with no tail whatever 余韻 says; 木魚 Mokugyo, the
+     * wooden fish, a pitched tok that follows the keys. Both the key held and 余韻 full: percussion ends by itself */
+    {
+        int hy = slot_of("Hyoshigi"), mo = slot_of("Mokugyo");
+        float a, b;
+        CHECK("Hyoshigi and Mokugyo are built in", hy >= 0 && mo >= 0);
+        fm_set(P_REVERB, 0);
+        fm_set(P_LEVEL, 60);
+        fm_set(P_YOIN, 100);
+        fm_set(P_HON, 4);
+        fm_set(P_VOICE, hy < 0 ? 0 : hy);
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 44032);
+        a = peak_of(0, 1323);
+        b = peak_of(8820, 44032);
+        printf("  Hyoshigi: peak %.1f dB, in 10 ms %.1f dB, after 200 ms %.1f dB; -40 dB at %d ms\n", db(a), db(peak_of(0, 441)), db(b), ms_to_db_below(0, a, 40.0));
+        CHECK("Hyoshigi: hits at once (the peak inside 10 ms)", peak_of(0, 441) > 0.7f * a);
+        CHECK("Hyoshigi: the crack is over in 200 ms with the key held and 余韻 full (40 dB down)", db(b) < db(a) - 40.0);
+        CHECK("Hyoshigi: and it is heard (above -40 dBFS at level 60)", db(a) > -40.0);
+        fm_key(5, 0);
+        run(0, 44032);
+        fm_set(P_VOICE, mo < 0 ? 0 : mo);
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 44032);
+        a = peak_of(0, 1323);
+        b = peak_of(17640, 44032);
+        printf("  Mokugyo: peak %.1f dB, in 10 ms %.1f dB, after 400 ms %.1f dB; -30 dB at %d ms; pitch %.1f cents from A3 (50-150 ms)\n",
+               db(a), db(peak_of(0, 441)), db(b), ms_to_db_below(0, a, 30.0), tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 220.0));
+        CHECK("Mokugyo: hits at once (the peak inside 10 ms)", peak_of(0, 441) > 0.7f * a);
+        CHECK("Mokugyo: the tok is over in 400 ms with the key held and 余韻 full (30 dB down)", db(b) < db(a) - 30.0);
+        CHECK_NEAR("Mokugyo: pitched, following the key (三 at 1本 = A3)", tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 220.0), 0.0, 15.0);
+        fm_key(5, 0);
+        run(0, 44032);
+        fm_key(10, 1);                            /* a fifth... no: the next mi, an octave up */
+        run(0, 44032);
+        CHECK_NEAR("Mokugyo: the octave above on the next mi", tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 440.0), 0.0, 15.0);
+        fm_key(10, 0);
+        run(0, 44032);
+    }
     /* cost and headroom: the six-operator koto, eight voices held, reverb; the pre-clip peak (fm_peak) stays
      * inside what the soft clip handles gracefully. The device figure comes from plat_cpu_pct() at M4 */
     fm_set(P_VOICE, koto_a());

@@ -90,14 +90,15 @@ PATCHES = [
         op(r=(93, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=3, ff=15),
         op(r=(99, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=9, ff=6),
     ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=38, lfd=0, lpmd=10, lamd=0, lks=0, lfw=0, lpms=2, trnsp=12)),
-    ('Shakuhachi', '尺八', voice('Shakuhachi', 1, [  # was AirFltMal1            # patches.fm: _Unknown, FLUTE01.SYX
-        op(r=(58, 99, 0, 44), l=(99, 99, 99, 0), ol=99, fc=12, det=1, mode=1),
-        op(r=(96, 94, 30, 39), l=(99, 99, 0, 0), ol=82, det=0, rd=5, rc=0),
-        op(r=(99, 99, 0, 44), l=(99, 99, 99, 0), ol=99, det=11, kvs=7),
-        op(r=(99, 46, 53, 30), l=(99, 99, 75, 29), ol=98, fc=2, det=0, kvs=2, rd=7, rc=0),
-        op(r=(93, 99, 99, 0), l=(99, 99, 99, 0), ol=39, fc=0, mode=1),
-        op(r=(99, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=11, ff=14, mode=1),
-    ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=38, lfd=0, lpmd=10, lamd=0, lks=0, lfw=0, lpms=2, trnsp=24)),
+    ('Shakuhachi', '尺八', voice('Shakuhachi', 16, [  # was PAN FL T A          # patches.fm: _Unknown, AAAHGOOD.SYX (the owner's pick, 10 Oct 2026,
+                                                                            # for the AirFltMal1 whose onset was a bright blast)
+        op(r=(60, 71, 66, 65), l=(82, 75, 95, 0), ol=99, det=13, kvs=2, bp=41),
+        op(r=(59, 53, 62, 54), l=(99, 60, 0, 0), ol=65, fc=4, ff=15, kvs=2, rs=4, bp=0),
+        op(r=(53, 38, 75, 61), l=(88, 44, 24, 0), ol=50, fc=2, ff=1, det=14, kvs=3, bp=46, lc=3),
+        op(r=(61, 25, 25, 60), l=(99, 99, 97, 0), ol=75, fc=2, det=0, rs=3, bp=60, ld=10, rd=10),
+        op(r=(65, 38, 0, 61), l=(99, 0, 0, 0), ol=51, fc=2, kvs=3, bp=53, rd=43),
+        op(r=(71, 64, 98, 61), l=(99, 67, 52, 0), ol=83, fc=4, ff=76, det=8, kvs=2, bp=46, rc=3),
+    ], fb=4, oks=1, pr=(94, 67, 95, 60), pl=(50, 50, 50, 50), lfs=30, lfd=23, lpmd=0, lamd=0, lks=0, lfw=0, lpms=1, trnsp=24)),
     ('Dragon Flt', '龍笛', voice('Dragon Flt', 14, [  # was ALTO FLUTE            # patches.fm: _Unknown, FLUTE01.SYX
         op(r=(53, 24, 37, 90), l=(99, 36, 0, 0), ol=94, det=5, kvs=7, ams=3, bp=99, ld=99, lc=1),
         op(r=(99, 41, 21, 99), l=(99, 99, 99, 0), ol=99, ams=1, rd=99, rc=0, ld=99, lc=0),
@@ -121,7 +122,32 @@ PATCHES = [
         op(r=(66, 31, 17, 30), l=(99, 75, 0, 0), ol=57, fc=0, ff=74, kvs=3, rs=3, bp=41, rd=15, rc=0),
         op(r=(99, 51, 26, 19), l=(99, 0, 0, 0), ol=78, fc=0, kvs=1, rs=1, bp=80),
         op(r=(98, 3, 26, 27), l=(98, 0, 0, 0), ol=73, fc=0, ff=56, kvs=1, rs=3, bp=41, rd=24, rc=0),
-    ], fb=7, oks=1, pr=(98, 98, 71, 98), pl=(50, 51, 50, 50), lfs=11, lfd=0, lpmd=0, lamd=0, lks=0, lfw=0, lpms=0, trnsp=12)),    ("Koto Pluck", "爪音", voice("Koto Pluck", 5, [  # was KOTO A
+    ], fb=7, oks=1, pr=(98, 98, 71, 98), pl=(50, 51, 50, 50), lfs=11, lfd=0, lpmd=0, lamd=0, lks=0, lfw=0, lpms=0, trnsp=12)),
+    # the wood pair, FuMi's own (1.0.4): percussion ends by itself, so 余韻 does not reach it. Algorithm 5, three
+    # carrier-modulator pairs, every envelope to zero. Measured through the host in tests/host/fumi_test.c.
+    # 拍子木: two hardwood sticks struck together (kabuki, sumo, the night watch): a dry crack with no pitch to
+    # speak of. Fixed-frequency carriers (so every key is the same crack) at 1.8 and 2.6 kHz, the second stack a
+    # few ms behind for the two sticks, their modulators inharmonic and collapsing in a few ms; the third pair a
+    # feedback noise burst for the first instant.
+    ("Hyoshigi", "拍子木", voice("Hyoshigi", 5, [
+        op(r=(99, 69, 99, 99), l=(99, 0, 0, 0), ol=99, fc=3, ff=26, mode=1),
+        op(r=(99, 92, 99, 99), l=(99, 0, 0, 0), ol=92, fc=3, ff=49, mode=1),
+        op(r=(90, 71, 99, 99), l=(99, 0, 0, 0), ol=96, fc=3, ff=41, mode=1),
+        op(r=(99, 93, 99, 99), l=(99, 0, 0, 0), ol=88, fc=3, ff=65, mode=1),
+        op(r=(99, 86, 99, 99), l=(99, 0, 0, 0), ol=86, fc=3, ff=10, mode=1),
+        op(r=(99, 95, 99, 99), l=(99, 0, 0, 0), ol=96, fc=3, ff=33, mode=1),
+    ], fb=7, lfs=0)),
+    # 木魚: the wooden fish, a hollow block struck with a padded beater to pace the chanting: a round, pitched tok.
+    # A sine carrier on the key's pitch with a quick downward scoop (the pitch envelope starts above and falls in
+    # ~20 ms), a modulator at 1.41 for the hollow wood, an octave stack for the knock, 150-250 ms decay.
+    ("Mokugyo", "木魚", voice("Mokugyo", 5, [
+        op(r=(99, 58, 99, 99), l=(99, 0, 0, 0), ol=99, rs=2),
+        op(r=(99, 79, 99, 99), l=(99, 0, 0, 0), ol=68, ff=41, rs=2),
+        op(r=(99, 70, 99, 99), l=(99, 0, 0, 0), ol=90, fc=2, rs=2),
+        op(r=(99, 84, 99, 99), l=(99, 0, 0, 0), ol=62, fc=2, ff=40, rs=2),
+        op(r=(99, 86, 99, 99), l=(99, 0, 0, 0), ol=80, fc=0, ff=70, rs=2),
+        op(r=(99, 92, 99, 99), l=(99, 0, 0, 0), ol=80, fc=5, ff=30, rs=2),
+    ], fb=4, pr=(96, 99, 99, 99), pl=(50, 50, 50, 58), lfs=0)),    ("Koto Pluck", "爪音", voice("Koto Pluck", 5, [  # was KOTO A
         op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=87, rs=2, rd=12, rc=0),
         op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=82, fc=2, rs=4),
         op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=99, rs=2, rd=15, rc=0),
