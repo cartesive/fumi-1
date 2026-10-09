@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FuMi-1 audition bench</title>
+<style>
+:root { --ground: #f7f2e8; --ink: #3b2f28; --muted: #8a7764; --rule: #e0d6c4; --accent: #c44830; --accent2: #2a7f76; --card: #fffaf1; --warn: #b36b00; }
+@media (prefers-color-scheme: dark) { :root { --ground: #1a1613; --ink: #efe6d6; --muted: #b0a08c; --rule: #3a322a; --accent: #e8745a; --accent2: #4cc3b6; --card: #241e19; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--ground); color: var(--ink); font: 14px/1.45 -apple-system, "Helvetica Neue", Arial, sans-serif; }
+header { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1.2rem; padding: .6rem 1rem; border-bottom: 1px solid var(--rule); position: sticky; top: 0; background: var(--ground); z-index: 5; }
+h1 { font-size: 1.15rem; margin: 0; }
+h2 { font-size: .95rem; margin: 0 0 .4rem; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+button, select, input[type=text], input[type=number] { font: inherit; color: var(--ink); background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: .25em .6em; }
+button { cursor: pointer; }
+button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+button.ab { background: var(--accent2); color: #fff; border-color: var(--accent2); }
+button:disabled { opacity: .5; cursor: default; }
+main { display: grid; grid-template-columns: 300px 1fr 360px; gap: 1rem; padding: 1rem; align-items: start; }
+@media (max-width: 1200px) { main { grid-template-columns: 1fr; } }
+section { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: .8rem; margin-bottom: 1rem; }
+.meter { display: inline-block; width: 120px; height: 10px; background: var(--rule); border-radius: 5px; overflow: hidden; vertical-align: middle; }
+.meter i { display: block; height: 100%; width: 0; background: var(--accent2); }
+.meter i.hot { background: var(--accent); }
+#patches { display: flex; flex-direction: column; gap: .35rem; max-height: 70vh; overflow: auto; }
+.patch { display: grid; grid-template-columns: 1fr auto; gap: .2rem .5rem; align-items: center; padding: .35rem .5rem; border: 1px solid var(--rule); border-radius: 8px; cursor: pointer; }
+.patch.cur { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.patch .name { font-weight: 600; }
+.patch .src { color: var(--muted); font-size: .8rem; grid-column: 1 / -1; }
+.patch .tag { font-size: .75rem; padding: 0 .4em; border-radius: 4px; background: var(--accent2); color: #fff; margin-left: .3em; }
+.patch .stars { color: var(--warn); letter-spacing: .1em; }
+.row { display: flex; flex-wrap: wrap; gap: .4rem .8rem; align-items: center; margin: .3rem 0; }
+.row label { display: inline-flex; align-items: center; gap: .35rem; }
+input[type=range] { width: 120px; vertical-align: middle; }
+.wide input[type=range] { width: 260px; }
+.keys { position: relative; height: 150px; margin: .4rem 0; user-select: none; }
+.key { position: absolute; border-radius: 10px; border: 1px solid var(--rule); background: #fff; cursor: pointer; display: flex; align-items: flex-end; justify-content: center; font-size: .75rem; color: #666; padding-bottom: 4px; }
+.key.black { background: #4a4a4a; color: #ddd; z-index: 2; }
+.key.lit { background: #f6b48e; }
+.key.black.lit { background: var(--accent2); }
+.key.tonic { border-color: var(--accent); border-width: 2px; }
+canvas#screen { width: 180px; height: 180px; image-rendering: pixelated; background: #000; border-radius: 4px; }
+.ops { display: grid; grid-template-columns: repeat(6, 1fr); gap: .4rem; }
+.op { border: 1px solid var(--rule); border-radius: 8px; padding: .3rem; font-size: .78rem; }
+.op h3 { margin: 0 0 .2rem; font-size: .85rem; }
+.op h3 .car { color: var(--accent); }
+.op label { display: grid; grid-template-columns: 2.6em 1fr 2.4em; align-items: center; gap: .2rem; }
+.op input[type=range] { width: 100%; }
+.vo label { display: inline-grid; grid-template-columns: 4em 1fr 2.4em; align-items: center; gap: .2rem; margin: .1rem .6rem .1rem 0; font-size: .8rem; }
+.vo input[type=range] { width: 90px; }
+textarea { width: 100%; min-height: 3.2em; font: inherit; background: var(--card); color: var(--ink); border: 1px solid var(--rule); border-radius: 6px; padding: .3em .5em; }
+.prompt { display: grid; grid-template-columns: 6.5em 1fr; gap: .3rem; align-items: center; margin: .2rem 0; }
+.prompt input { width: 100%; }
+.log { font-size: .78rem; color: var(--muted); max-height: 9em; overflow: auto; white-space: pre-wrap; }
+.clip { display: grid; grid-template-columns: 1fr auto auto auto; gap: .3rem; align-items: center; margin: .2rem 0; font-size: .85rem; }
+.clip input { width: 4.5em; }
+kbd { font: 600 .8em ui-monospace, Menlo, monospace; background: var(--ground); border: 1px solid var(--rule); border-radius: 4px; padding: 0 .3em; }
+.hint { color: var(--muted); font-size: .8rem; }
+.blind { filter: blur(6px); }
+#status { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>FuMi-1 audition bench</h1>
+  <button id="go">Switch on</button>
+  <span id="status">Off. The engine starts when you switch it on.</span>
+  <span>out <span class="meter"><i id="meter"></i></span></span>
+  <span id="cpu" class="hint"></span>
+  <label>MIDI in <select id="midiin"><option value="">(none)</option></select></label>
+  <label>bench level <input type="range" id="benchlevel" min="0" max="100" value="70"></label>
+  <button id="panic" title="Everything quiet">Panic</button>
+</header>
+<main>
+  <div>
+    <section>
+      <h2>Patches <span class="hint">(click, or <kbd>Shift</kbd>+<kbd>1</kbd>..<kbd>0</kbd>)</span></h2>
+      <div class="row">
+        <button id="loadsyx">Load .syx…</button><input type="file" id="syxfile" accept=".syx,.SYX" multiple hidden>
+        <button id="refsload" title="Load every .syx found in refs/">refs/</button>
+        <button id="hybrids" title="A first set of hybrids from A and B">Hybrids from A + B</button>
+      </div>
+      <div id="patches"></div>
+    </section>
+    <section>
+      <h2>Session</h2>
+      <div class="row">
+        <button id="exportjson">Export session</button>
+        <button id="importjson">Import…</button><input type="file" id="jsonfile" accept=".json" hidden>
+        <button id="exportsyx" title="The patches marked for export, as a 32-voice DX7 bank for the stock firmware">Export .syx bank</button>
+      </div>
+      <div class="log" id="log"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Play</h2>
+      <div class="row">
+        <canvas id="screen" width="240" height="240"></canvas>
+        <div>
+          <div class="row">
+            <label>本数 <select id="p_hon"></select></label>
+            <label>調律 <select id="p_tuning"></select></label>
+            <label>depth <input type="range" id="p_depth" min="0" max="150"> <span id="v_depth"></span></label>
+            <label>scale <select id="p_scale"></select></label>
+            <button id="octdn" title="OCT- (Z): bend down with a note held, else octave down">OCT−</button>
+            <button id="octup" title="OCT+ (X): bend up with a note held, else octave up">OCT+</button>
+            <span id="bendv" class="hint"></span>
+          </div>
+          <div class="row">
+            <label>余韻 <input type="range" id="p_yoin" min="0" max="100"> <span id="v_yoin"></span></label>
+            <label><input type="checkbox" id="p_vib"> vibrato</label>
+            <label>rate <input type="range" id="p_vibrate" min="0" max="100"></label>
+            <label>depth <input type="range" id="p_vibdepth" min="0" max="100"></label>
+          </div>
+          <div class="row">
+            <label><input type="checkbox" id="p_trill"> trill</label>
+            <label>rate <input type="range" id="p_trillrate" min="0" max="100"></label>
+            <label>var <input type="range" id="p_trillvar" min="0" max="100"></label>
+            <label><input type="checkbox" id="p_mono"> mono</label>
+            <label><input type="checkbox" id="p_slide"> slide</label>
+            <label>bend <select id="p_bendup"><option value="0">semitone</option><option value="1">whole tone</option><option value="2">next scale note</option></select></label>
+            <label><input type="checkbox" id="p_black"> black keys = ornaments</label>
+          </div>
+          <div class="row">
+            <label>low cut <input type="range" id="p_lowcut" min="0" max="100"></label>
+            <label>high cut <input type="range" id="p_highcut" min="0" max="100"></label>
+            <label>character <input type="range" id="p_character" min="0" max="100"></label>
+            <label>reverb <input type="range" id="p_reverb" min="0" max="100"></label>
+            <label>size <input type="range" id="p_revsize" min="0" max="100"></label>
+          </div>
+        </div>
+      </div>
+      <div class="keys" id="keys"></div>
+      <p class="hint">White keys <kbd>Q</kbd>–<kbd>I</kbd> and <kbd>A</kbd>–<kbd>K</kbd>; black keys <kbd>1</kbd>–<kbd>0</kbd> <kbd>-</kbd>; <kbd>Z</kbd>/<kbd>X</kbd> OCT−/OCT+ (bend with a note held). Drag across the keys for a glissando.
+        Ornament mode: black keys 1 vibrato, 2 trill, 3 damp, 4 strong pluck (and 6–9 again).</p>
+      <div class="row">
+        <span>Phrases:</span>
+        <button class="phrase" data-p="registers">Three registers</button>
+        <button class="phrase" data-p="slow">Slow, ringing</button>
+        <button class="phrase" data-p="gliss">Glissando</button>
+        <button class="phrase" data-p="bend">Bend</button>
+        <button class="phrase" data-p="trill">Trill</button>
+        <button id="phrasestop">Stop</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Compare</h2>
+      <div class="row">
+        <span>A: <b id="aname">—</b></span> <span>B: <b id="bname">—</b></span>
+        <button id="abtoggle" title="Switch between A and B (`)">A ⇄ B</button>
+        <button id="blind">Blind A/B</button>
+        <span id="blindbox" hidden>playing <b id="blindwhich">?</b> <button id="blindswap">swap</button> <button id="votea">this one is better</button> <button id="reveal">reveal</button></span>
+      </div>
+      <div class="row wide">
+        <label>morph A → B <input type="range" id="morph" min="0" max="100" value="50"></label>
+        <button id="morphkeep">Keep this morph as a patch</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Patch <span id="curname"></span> <span class="hint" id="curinfo"></span></h2>
+      <div class="row">
+        <label>name <input type="text" id="pname" maxlength="10" size="12"></label>
+        <button id="dup">Duplicate and vary</button>
+        <label>vary by <input type="range" id="varyamt" min="1" max="30" value="8"></label>
+        <button id="savecur" title="Keep the current edits as a patch in the list">Keep as new</button>
+        <label><input type="checkbox" id="exportmark"> export to .syx</label>
+      </div>
+      <div class="vo" id="voice"></div>
+      <div class="ops" id="ops"></div>
+    </section>
+  </div>
+
+  <div>
+    <section>
+      <h2>Reference clips <span class="hint">(refs/, level-matched)</span></h2>
+      <div class="row"><label>clip level <input type="range" id="cliplevel" min="0" max="100" value="60"></label> <button id="clipstop">Stop</button></div>
+      <div id="clips"></div>
+    </section>
+    <section>
+      <h2>Notes on <span id="notesname">—</span></h2>
+      <div class="row">rating <span id="rating"></span></div>
+      <div class="prompt"><span>attack</span><input type="text" data-k="attack"></div>
+      <div class="prompt"><span>body</span><input type="text" data-k="body"></div>
+      <div class="prompt"><span>tail</span><input type="text" data-k="tail"></div>
+      <div class="prompt"><span>glissando</span><input type="text" data-k="gliss"></div>
+      <div class="prompt"><span>low / mid / high</span><input type="text" data-k="registers"></div>
+      <textarea id="notes" placeholder="free notes"></textarea>
+    </section>
+  </div>
+</main>
+<script type="module" src="bench.js"></script>
+</body>
+</html>

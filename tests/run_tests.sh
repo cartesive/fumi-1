@@ -54,7 +54,8 @@ fi
 run host-build sh host/build_host.sh
 if command -v emcc >/dev/null 2>&1; then
     run emu sh -c "sh web/emu/build.sh >/dev/null && node tests/host/emu_test.mjs build/emu/fumi.wasm"
-    [ -f tests/host/syx_test.mjs ] && run syx-js node tests/host/syx_test.mjs
+    run bench node tests/host/bench_test.mjs build/emu/fumi.wasm
+    run syx-js node tests/host/syx_test.mjs
 fi
 for s in tests/scenarios/*.fumi; do
     n=$(basename "$s" .fumi)
