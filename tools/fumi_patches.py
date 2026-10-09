@@ -62,8 +62,9 @@ def pack(v):
 # (section 4, A4: partials at onset 0, 0, -2, -9, -6 dB, at 300 ms 0, -6, -2, -2 with the 5th up below -20;
 # click 7-9 dB above 5 kHz in the first 12 ms; -28 dB/s for 200 ms then -16; peak within 5 ms). WARM is A
 # with the modulators turned down and the third stack up. Measured again through the host in tests.
+# (name on the record, up to 10 ASCII characters; the Japanese name the screen shows beneath it; the voice)
 PATCHES = [
-    ("N-KOTO-A5", voice("N-KOTO-A5", 2, [           # the owner's pick, 9 Oct 2026: the Aminet dx-syx collection, bank 073.syx,
+    ("Koto", "琴", voice("Koto", 2, [  # was N-KOTO-A5           # the owner's pick, 9 Oct 2026: the Aminet dx-syx collection, bank 073.syx,
                                                     # author unknown (patches.fm). Not a Yamaha ROM voice. Algorithm 2.
         op(r=(94, 43, 16, 34), l=(99, 92, 0, 0), ol=99, kvs=1, rs=7),
         op(r=(99, 47, 32, 48), l=(99, 86, 0, 0), ol=87, fc=4, rs=7, rd=11, rc=0),
@@ -74,14 +75,14 @@ PATCHES = [
     ], fb=5, pr=(90, 11, 75, 53), pl=(49, 50, 50, 50), lfs=30, lfd=0, lpmd=0, lamd=16, lpms=2, trnsp=24)),
     # the owner's further picks (patches.fm), 9 Oct 2026: four flutes and a drum, community banks, authors as given;
 # they follow the boot patch, FuMi's own kotos come after
-    ('Kuto S', voice('Kuto S', 2, [                # patches.fm: Aminet, 072.syx, renamed from 'KOTO-KOTO'
+    ('Koto II', '箏', voice('Koto II', 2, [  # was Kuto S                # patches.fm: Aminet, 072.syx, renamed from 'KOTO-KOTO'
         op(r=(94, 62, 28, 34), l=(99, 95, 0, 0), ol=99, kvs=3, rs=6),
         op(r=(99, 64, 29, 24), l=(99, 91, 0, 0), ol=98, rs=6, bp=34, rd=6, rc=0),
         op(r=(94, 64, 28, 33), l=(99, 95, 0, 0), ol=99, kvs=3, rs=5),
         op(r=(90, 19, 17, 20), l=(99, 90, 0, 0), ol=80, kvs=1, rs=7, bp=10, rd=11, rc=1),
         op(r=(91, 40, 32, 29), l=(99, 93, 0, 0), ol=84, fc=3, kvs=1, rs=6, rd=5, rc=0),
         op(r=(82, 41, 32, 36), l=(99, 90, 0, 0), ol=82, fc=3, kvs=1, rs=7, rd=5, rc=0),
-    ], fb=5, oks=1, pr=(90, 34, 75, 53), pl=(49, 50, 50, 50), lfs=30, lfd=0, lpmd=0, lamd=16, lks=1, lfw=1, lpms=6, trnsp=24)),    ('Air---*--3', voice('Air---*--3', 1, [            # patches.fm: _Unknown, FLUTE01.SYX
+    ], fb=5, oks=1, pr=(90, 34, 75, 53), pl=(49, 50, 50, 50), lfs=30, lfd=0, lpmd=0, lamd=16, lks=1, lfw=1, lpms=6, trnsp=24)),    ('Sho', '笙', voice('Sho', 1, [  # was Air---*--3            # patches.fm: _Unknown, FLUTE01.SYX
         op(r=(58, 99, 0, 44), l=(99, 99, 99, 0), ol=99, fc=0, det=0, mode=1, kvs=1),
         op(r=(96, 94, 30, 39), l=(99, 99, 0, 0), ol=82, fc=2, det=0, rd=5, rc=0),
         op(r=(67, 99, 0, 44), l=(99, 99, 99, 0), ol=80, fc=3, det=11, kvs=1),
@@ -89,7 +90,7 @@ PATCHES = [
         op(r=(93, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=3, ff=15),
         op(r=(99, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=9, ff=6),
     ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=38, lfd=0, lpmd=10, lamd=0, lks=0, lfw=0, lpms=2, trnsp=12)),
-    ('AirFltMal1', voice('AirFltMal1', 1, [            # patches.fm: _Unknown, FLUTE01.SYX
+    ('Shakuhachi', '尺八', voice('Shakuhachi', 1, [  # was AirFltMal1            # patches.fm: _Unknown, FLUTE01.SYX
         op(r=(58, 99, 0, 44), l=(99, 99, 99, 0), ol=99, fc=12, det=1, mode=1),
         op(r=(96, 94, 30, 39), l=(99, 99, 0, 0), ol=82, det=0, rd=5, rc=0),
         op(r=(99, 99, 0, 44), l=(99, 99, 99, 0), ol=99, det=11, kvs=7),
@@ -97,7 +98,7 @@ PATCHES = [
         op(r=(93, 99, 99, 0), l=(99, 99, 99, 0), ol=39, fc=0, mode=1),
         op(r=(99, 99, 99, 0), l=(99, 99, 99, 0), ol=99, fc=11, ff=14, mode=1),
     ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=38, lfd=0, lpmd=10, lamd=0, lks=0, lfw=0, lpms=2, trnsp=24)),
-    ('ALTO FLUTE', voice('ALTO FLUTE', 14, [            # patches.fm: _Unknown, FLUTE01.SYX
+    ('Dragon Flt', '龍笛', voice('Dragon Flt', 14, [  # was ALTO FLUTE            # patches.fm: _Unknown, FLUTE01.SYX
         op(r=(53, 24, 37, 90), l=(99, 36, 0, 0), ol=94, det=5, kvs=7, ams=3, bp=99, ld=99, lc=1),
         op(r=(99, 41, 21, 99), l=(99, 99, 99, 0), ol=99, ams=1, rd=99, rc=0, ld=99, lc=0),
         op(r=(44, 62, 52, 63), l=(99, 98, 97, 0), ol=99, det=9, kvs=2, rs=2),
@@ -105,7 +106,7 @@ PATCHES = [
         op(r=(76, 99, 99, 35), l=(99, 97, 94, 0), ol=61, det=10),
         op(r=(49, 53, 58, 99), l=(75, 97, 91, 0), ol=41, fc=2, det=4, ams=1),
     ], fb=0, oks=1, pr=(98, 98, 98, 98), pl=(50, 50, 50, 50), lfs=33, lfd=42, lpmd=0, lamd=59, lks=0, lfw=4, lpms=1, trnsp=24)),
-    ('Bamboo Flt', voice('Bamboo Flt', 5, [            # patches.fm: _Unknown, FLUTE01.SYX
+    ('Bamboo Flt', '篠笛', voice('Bamboo Flt', 5, [            # patches.fm: _Unknown, FLUTE01.SYX
         op(r=(46, 42, 99, 55), l=(99, 90, 90, 0), ol=99, kvs=2, ams=3, rs=1),
         op(r=(99, 99, 99, 43), l=(99, 99, 99, 0), ol=73, fc=2, det=10, kvs=2, bp=39, rd=99, rc=1),
         op(r=(46, 99, 99, 64), l=(99, 99, 99, 0), ol=64, fc=2, det=13, kvs=2, ams=2, rs=1),
@@ -113,15 +114,14 @@ PATCHES = [
         op(r=(54, 99, 52, 99), l=(99, 99, 66, 0), ol=64, fc=0, det=11, kvs=4, ams=2, bp=27, rd=15, rc=1),
         op(r=(99, 99, 49, 99), l=(99, 99, 93, 0), ol=99, fc=10),
     ], fb=7, oks=1, pr=(99, 99, 99, 99), pl=(50, 50, 50, 50), lfs=26, lfd=39, lpmd=6, lamd=0, lks=0, lfw=4, lpms=2, trnsp=24)),
-    ('T. Drum', voice('T. Drum', 15, [               # patches.fm: Tim Garrett, TX7-32B.SYX, renamed from 'Bongos.2'
-        op(r=(99, 40, 74, 38), l=(99, 0, 0, 0), ol=62, ff=46, kvs=4, rs=4, bp=2),
-        op(r=(99, 22, 42, 25), l=(99, 0, 0, 0), ol=41, fc=7, ff=75, mode=1, rs=5, bp=2),
-        op(r=(99, 34, 37, 45), l=(99, 0, 0, 0), ol=99, fc=0, ff=4, kvs=1, rs=6, bp=2),
-        op(r=(99, 99, 99, 98), l=(99, 99, 0, 0), ol=64, fc=4, ff=2, det=10, rs=7, bp=2),
-        op(r=(99, 94, 99, 43), l=(99, 27, 0, 0), ol=99, fc=3, ff=4, det=6, rs=7, bp=14),
-        op(r=(99, 75, 99, 23), l=(99, 0, 0, 0), ol=99, ff=50, det=8, mode=1, rs=7, bp=14),
-    ], fb=0, oks=1, pr=(98, 98, 98, 98), pl=(50, 50, 50, 50), lfs=4, lfd=0, lpmd=0, lamd=80, lks=1, lfw=2, lpms=7, trnsp=24)),
-    ("KOTO A", voice("KOTO A", 5, [
+    ('Taiko', '太鼓', voice('Taiko', 17, [                 # patches.fm: Tim Garrett, TX7-26B.SYX, renamed from 'Timpani.2'
+        op(r=(87, 37, 98, 33), l=(99, 0, 0, 0), ol=99, fc=0, kvs=2, rs=3),
+        op(r=(87, 76, 27, 23), l=(99, 72, 0, 0), ol=57, fc=0, kvs=1, rs=2, bp=41),
+        op(r=(86, 77, 26, 23), l=(99, 72, 0, 0), ol=93, fc=0, ff=38, kvs=2, rs=7),
+        op(r=(66, 31, 17, 30), l=(99, 75, 0, 0), ol=57, fc=0, ff=74, kvs=3, rs=3, bp=41, rd=15, rc=0),
+        op(r=(99, 51, 26, 19), l=(99, 0, 0, 0), ol=78, fc=0, kvs=1, rs=1, bp=80),
+        op(r=(98, 3, 26, 27), l=(98, 0, 0, 0), ol=73, fc=0, ff=56, kvs=1, rs=3, bp=41, rd=24, rc=0),
+    ], fb=7, oks=1, pr=(98, 98, 71, 98), pl=(50, 51, 50, 50), lfs=11, lfd=0, lpmd=0, lamd=0, lks=0, lfw=0, lpms=0, trnsp=12)),    ("Koto Pluck", "爪音", voice("Koto Pluck", 5, [  # was KOTO A
         op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=87, rs=2, rd=12, rc=0),
         op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=82, fc=2, rs=4),
         op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=99, rs=2, rd=15, rc=0),
@@ -129,7 +129,7 @@ PATCHES = [
         op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=82, fc=1, det=9, rs=2),
         op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=84, fc=1, det=5, rs=2),
     ], fb=2)),
-    ("KOTO B", voice("KOTO B", 5, [                 # brighter: the twang stack at ratio 3, harder
+    ("Koto Ring", "響", voice("Koto Ring", 5, [  # was KOTO B                 # brighter: the twang stack at ratio 3, harder
         op(r=(99, 52, 95, 60), l=(99, 87, 0, 0), ol=92, rs=2, rd=12, rc=0),
         op(r=(99, 93, 32, 60), l=(99, 90, 34, 0), ol=99, fc=3, rs=4),
         op(r=(99, 99, 32, 60), l=(99, 91, 0, 0), ol=99, rs=2, rd=15, rc=0),
@@ -137,7 +137,7 @@ PATCHES = [
         op(r=(99, 95, 54, 60), l=(99, 83, 0, 0), ol=97, fc=1, det=9, rs=2),
         op(r=(99, 28, 77, 60), l=(99, 67, 8, 0), ol=75, fc=1, det=5, rs=2),
     ], fb=5)),
-    ("KOTO WARM", voice("KOTO WARM", 5, [           # A, rounder: less twang and body index, more of stack C
+    ("Koto Warm", "名残", voice("Koto Warm", 5, [  # was KOTO WARM           # A, rounder: less twang and body index, more of stack C
         op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=84, rs=2, rd=12, rc=0),
         op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=72, fc=2, rs=4),
         op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=99, rs=2, rd=15, rc=0),
@@ -145,7 +145,7 @@ PATCHES = [
         op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=90, fc=1, det=9, rs=2),
         op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=70, fc=1, det=5, rs=2),
     ], fb=2)),
-    ("HARP SOFT", voice("HARP SOFT", 5, [           # a harp-like pluck: softer attack, long even decay
+    ("Harp", "箜篌", voice("Harp", 5, [  # was HARP SOFT           # a harp-like pluck: softer attack, long even decay
         op(r=(95, 70, 50, 65), l=(99, 70, 0, 0), ol=92, rs=2, rd=10, rc=0),
         op(r=(99, 85, 50, 80), l=(99, 0, 0, 0), ol=66, fc=3, rs=3),
         op(r=(96, 40, 30, 55), l=(99, 85, 0, 0), ol=99, rs=2, rd=12, rc=0),
@@ -159,9 +159,10 @@ PATCHES = [
 def main(path):
     L = ["/* generated by tools/fumi_patches.py: FuMi-1's own patches, packed 128-byte voices (no ROM data) */",
          "#pragma once", "#include <stdint.h>", f"#define FM_NPATCH {len(PATCHES)}",
-         "static const char *const FM_PATCH_NAME[FM_NPATCH] = {" + ", ".join(f'"{n}"' for n, _ in PATCHES) + "};",
+         "static const char *const FM_PATCH_NAME[FM_NPATCH] = {" + ", ".join(f'"{n}"' for n, _, _ in PATCHES) + "};",
+         "static const char *const FM_PATCH_JA[FM_NPATCH] = {" + ", ".join(f'"{j}"' for _, j, _ in PATCHES) + "};  /* UTF-8 */",
          "static const uint8_t FM_PATCH[FM_NPATCH][128] = {"]
-    for name, v in PATCHES:
+    for name, _, v in PATCHES:
         b = pack(v)
         L.append(f"    {{ /* {name} */")
         for i in range(0, 128, 16):

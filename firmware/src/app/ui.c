@@ -407,6 +407,10 @@ static void draw_main(void)
         }
         cv_text(240 - 12 - text_w(&FONT_B, (const char *)fm_patch_label), 4, &FONT_B, (const char *)fm_patch_label,
                 fm_patch_custom ? K_KOTO : K_TEXT);
+        if (!fm_patch_custom) {                 /* the instrument's Japanese name beneath, Suiko-style */
+            const char *ja = FM_PATCH_JA_LCD[proj.par[P_VOICE]];
+            cv_text(240 - 12 - text_w(&FONT_JP, ja), 21, &FONT_JP, ja, K_TEXT);
+        }
         {
             char line[40];
             int k = 0;
@@ -419,7 +423,7 @@ static void draw_main(void)
             while (*b)
                 line[k++] = *b++;
             line[k] = 0;
-            cv_text(240 - 12 - text_w(&FONT_XS, line), 24, &FONT_XS, line, K_DIM);
+            cv_text(240 - 12 - text_w(&FONT_XS, line), 39, &FONT_XS, line, K_DIM);
         }
     }
     draw_keys(52, 56);

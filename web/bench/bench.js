@@ -60,7 +60,7 @@ function select(i, why) {
   p.voice = sanitizeInPlace(p.voice);
   sendCurrent(true);
   if (!S.blind) {
-    $("curname").textContent = p.name;
+    $("curname").textContent = p.ja ? `${p.name} ${p.ja}` : p.name;
     $("curinfo").textContent = `alg ${p.voice[FP.ALG] + 1}, fb ${p.voice[FP.FB]}, from ${p.source}`;
     $("notesname").textContent = p.name;
     $("pname").value = p.name;
@@ -85,7 +85,7 @@ function renderList() {
     const d = document.createElement("div");
     d.className = "patch" + (i === S.cur && !S.blind ? " cur" : "") + (p.pending ? " pending" : "");
     const tags = (i === S.a ? '<span class="tag">A</span>' : "") + (i === S.b ? '<span class="tag">B</span>' : "") + (p.exp ? '<span class="tag" style="background:#b36b00">syx</span>' : "");
-    d.innerHTML = `<span class="name ${S.blind ? "blind" : ""}">${i < 10 ? `<kbd>${(i + 1) % 10}</kbd> ` : ""}${esc(p.name)}${tags}</span>
+    d.innerHTML = `<span class="name ${S.blind ? "blind" : ""}">${i < 10 ? `<kbd>${(i + 1) % 10}</kbd> ` : ""}${esc(p.name)}${p.ja ? ` <span class="ja">${esc(p.ja)}</span>` : ""}${tags}</span>
       <span class="stars" title="rating">${stars(p.rating)}</span>
       <span class="src">${esc(p.source)} <button data-a="a" title="make this A">A</button> <button data-a="b" title="make this B">B</button> <button data-a="del" title="remove">×</button></span>`;
     d.addEventListener("click", (e) => {
@@ -640,7 +640,7 @@ async function switchOn() {
     const readyP = new Promise((res) => {
       node.port.onmessage = (e) => {
         const m = e.data;
-        if (m.type === "ready") { PARAMS = m.params; P = Object.fromEntries(PARAMS.map((p) => [p.name, p.p])); m.builtins.forEach((b) => addPatch(newPatch(unpack(b), "FuMi built-in"), true)); res(); }
+        if (m.type === "ready") { PARAMS = m.params; P = Object.fromEntries(PARAMS.map((p) => [p.name, p.p])); m.builtins.forEach((b, i) => addPatch(newPatch(unpack(b), "FuMi built-in", { ja: (m.ja || [])[i] || "" }), true)); res(); }
         else if (m.type === "frame") onFrame(m);
       };
     });
@@ -664,6 +664,7 @@ async function switchOn() {
         const old = S.patches.find((p) => p.source === b.source && p.name === b.name);
         if (!old) return b;
         if (!old.voice.every((x, i) => x === b.voice[i])) { old.voice = new Uint8Array(b.voice); old.pending = false; updated++; }
+        old.ja = b.ja;
         return old;
       });
       // built-ins come first, in this build's order; a saved built-in this build no longer has is dropped

@@ -58,6 +58,7 @@ void fm_patch_set(const uint8_t *packed128);     /* the current patch (a DX7-for
 void fm_patch_get(uint8_t *packed128);           /* main loop: the patch the render uses */
 int fm_patch_count(void);                        /* FuMi's own patches (P_VOICE) */
 const char *fm_patch_name(int i);
+const char *fm_patch_ja(int i);                   /* its Japanese name, UTF-8 (the screen uses fumi_kanji.h) */
 const uint8_t *fm_patch_builtin(int i);          /* its packed record */
 float fm_key_cents(int key);                     /* main loop: the pitch a panel key plays now, cents from A4 */
 

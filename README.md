@@ -55,6 +55,29 @@ web/bench/serve.py      # then open http://localhost:8765/build/bench/
 `build/host/fumi_host SCRIPT OUTDIR` runs the whole app on a computer from a script
 (`tests/scenarios/*.fumi`), with audio and screenshots coming out.
 
+## The instruments
+
+PRESETS steps through the built-in instruments; the screen shows each one's name with its Japanese name
+beneath, Suiko-style. The first seven are the owner's picks from community DX7 banks (patches.fm; each
+entry in `tools/fumi_patches.py` names its bank and author); the last four are FuMi's own.
+
+| # | Name | 名 | Where from |
+|---|---|---|---|
+| 1 | Koto | 琴 | N-KOTO-A5, Aminet 073.syx. The boot instrument |
+| 2 | Koto II | 箏 | KOTO-KOTO, Aminet 072.syx |
+| 3 | Sho | 笙 | Air---*--3, FLUTE01.SYX |
+| 4 | Shakuhachi | 尺八 | AirFltMal1, FLUTE01.SYX |
+| 5 | Dragon Flt | 龍笛 | ALTO FLUTE, FLUTE01.SYX |
+| 6 | Bamboo Flt | 篠笛 | Bamboo Flt, FLUTE01.SYX |
+| 7 | Taiko | 太鼓 | Timpani.2 by Tim Garrett, TX7-26B.SYX |
+| 8 | Koto Pluck | 爪音 | FuMi's own, found by `tools/koto_search.c` against the ST-50 measurements |
+| 9 | Koto Ring | 響 | FuMi's own, brighter |
+| 10 | Koto Warm | 名残 | FuMi's own, rounder |
+| 11 | Harp | 箜篌 | FuMi's own |
+
+No Yamaha factory ROM voice is among them (a ROM2B pick was declined). The kanji come from Noto Sans CJK
+(SIL OFL 1.1) through `tools/gen_kanji.py`, which keeps only the seventeen characters these names use.
+
 ## The audition bench
 
 Voicing happens in the browser, on FuMi's real engine (`web/bench/`, see `docs/research/16-audition-bench.md`):

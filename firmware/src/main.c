@@ -20,6 +20,7 @@
 #include "libc.c"
 #include "lcd.c"
 #include "gfx.c"
+#include "app/fumi_kanji.h"                  /* the patches' Japanese names for the screen (needs felucca_font_t) */
 
 static volatile uint32_t fm1_ms;  /* milliseconds since boot (TIMER4-based, TIMER5 ISR) */
 #define RING_PUBLISH() __asm__ volatile("" ::: "memory")

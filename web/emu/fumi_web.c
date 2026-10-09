@@ -97,5 +97,6 @@ __attribute__((used, visibility("default"))) int web_custom(void) { return fm_pa
 __attribute__((used, visibility("default"))) float web_key_cents(int k) { return fm_key_cents(k); }
 __attribute__((used, visibility("default"))) int web_npatch(void) { return fm_patch_count(); }
 __attribute__((used, visibility("default"))) const uint8_t *web_builtin(int i) { return fm_patch_builtin(i); }
+__attribute__((used, visibility("default"))) const char *web_patch_ja(int i) { return fm_patch_ja(i); }
 __attribute__((used, visibility("default"))) float web_key_level(int k) { return k >= 0 && k < FM_NKEY ? fm_key_level[k] : 0.0f; }
 __attribute__((used, visibility("default"))) float web_bend_cents(void) { return fm_bend_cents; }

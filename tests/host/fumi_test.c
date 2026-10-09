@@ -39,11 +39,11 @@ static float peak_of(int from, int to)
     return pk;
 }
 static double db(float x) { return 20.0 * log10(x > 1e-9f ? (double)x : 1e-9); }
-static int koto_a(void)                           /* the slot of FuMi's own KOTO A (the owner's picks come first) */
+static int koto_a(void)                           /* the slot of FuMi's own KOTO A, "Koto Pluck" (the owner's picks come first) */
 {
     int i;
     for (i = 0; i < fm_patch_count(); i++)
-        if (!strcmp(fm_patch_name(i), "KOTO A"))
+        if (!strcmp(fm_patch_name(i), "Koto Pluck"))
             return i;
     return 0;
 }
@@ -275,7 +275,7 @@ int main(void)
         CHECK("built-in patches exist", fm_patch_count() >= 2 && fm_patch_name(0)[0] != 0);
         fm_set(P_VOICE, koto_a());
         run(0, 256);
-        CHECK("P_VOICE loads a built-in", fm_patch_custom == 0 && !strncmp((const char *)fm_patch_label, "KOTO A", 6));
+        CHECK("P_VOICE loads a built-in", fm_patch_custom == 0 && !strncmp((const char *)fm_patch_label, "Koto Pluck", 10));
         fm_key(5, 1);
         {
             float pk = run(0, 22016);

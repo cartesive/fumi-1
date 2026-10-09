@@ -138,6 +138,7 @@ void fm_patch_get(uint8_t *pk)
 }
 int fm_patch_count(void) { return FM_NPATCH; }
 const char *fm_patch_name(int i) { return FM_PATCH_NAME[(i < 0 || i >= FM_NPATCH) ? 0 : i]; }
+const char *fm_patch_ja(int i) { return FM_PATCH_JA[(i < 0 || i >= FM_NPATCH) ? 0 : i]; }
 const uint8_t *fm_patch_builtin(int i) { return FM_PATCH[(i < 0 || i >= FM_NPATCH) ? 0 : i]; }
 
 /* --------------------------------------------------------------- state --- */

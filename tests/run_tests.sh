@@ -37,6 +37,12 @@ run koto-search sh -c "$CC -O2 -std=gnu99 -Wno-unused-function -Ifirmware/src/ds
 # no double anywhere in the firmware's own code (the FPU is single precision)
 run no-double sh -c "$CC -fsyntax-only -std=c99 -Wall -Wextra -Wdouble-promotion -Werror -Wno-unused-function -DFM_HOST -Ifirmware/src/dsp firmware/src/dsp/fumi.c && $PY tools/check_no_double.py firmware/src/dsp/*.c firmware/src/dsp/*.h firmware/src/app/*.c firmware/src/app/*.h"
 run tables sh -c "$PY tools/gen_fm6_tables.py $OUT/fm6_tables.h >/dev/null && cmp $OUT/fm6_tables.h firmware/src/dsp/fm6_tables.h && $PY tools/fumi_patches.py $OUT/fumi_patches.h >/dev/null && cmp $OUT/fumi_patches.h firmware/src/dsp/fumi_patches.h"
+# the kanji header is checked in; regenerated and compared when a Noto Sans CJK font is at hand
+if $PY -c "import sys; sys.path.insert(0, 'tools'); import gen_kanji; sys.exit(0 if gen_kanji.find_font(None) else 1)" 2>/dev/null; then
+    run kanji sh -c "$PY tools/gen_kanji.py $OUT/fumi_kanji.h >/dev/null && cmp $OUT/fumi_kanji.h firmware/src/app/fumi_kanji.h"
+else
+    echo "  skip kanji (needs a Noto Sans CJK font: FUMI_CJK_FONT)"
+fi
 run storage sh -c "$CC -O2 -o $OUT/storage_test tests/storage_test.c && $OUT/storage_test"
 # the update path, against the firmware package (Felucca's tests; needs ./build.sh)
 if [ -f build/fumi.fwsc ]; then

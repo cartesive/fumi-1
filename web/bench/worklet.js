@@ -50,10 +50,15 @@ class FumiBench extends AudioWorkletProcessor {
         params.push({ p, name, lo: this.ex.web_param_lo(p), hi: this.ex.web_param_hi(p), value: this.ex.web_param_get(p) });
         if (p > 80) break;
       }
-      const builtins = [];
-      for (let i = 0; i < this.ex.web_npatch(); i++)
+      const builtins = [], ja = [];
+      for (let i = 0; i < this.ex.web_npatch(); i++) {
         builtins.push(new Uint8Array(this.mem.buffer, this.ex.web_builtin(i), 128).slice());
-      this.port.postMessage({ type: "ready", params, builtins });
+        const m = new Uint8Array(this.mem.buffer), a = this.ex.web_patch_ja(i);   // UTF-8, NUL-ended
+        let e = a;
+        while (m[e] && e < a + 32) e++;
+        ja.push(new TextDecoder().decode(m.slice(a, e)));
+      }
+      this.port.postMessage({ type: "ready", params, builtins, ja });
     } else if (!this.ex) {
       return;
     } else if (m.type === "buttons") {

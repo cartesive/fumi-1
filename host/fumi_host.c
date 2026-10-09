@@ -55,6 +55,7 @@ static void lcd_blit(uint32_t x, uint32_t y, uint32_t w, uint32_t h, const uint1
                 fb[(y + j) * 240u + x + i] = px[j * w + i];
 }
 #include "../firmware/src/gfx.c"
+#include "../firmware/src/app/fumi_kanji.h"                  /* the patches' Japanese names for the screen (needs felucca_font_t) */
 
 
 /* ---------------------------------------------------------- platform --- */
