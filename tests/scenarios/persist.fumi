@@ -1,5 +1,5 @@
 # the setup survives a save and a reboot; a bad object gives the defaults
-spin SELECT 2
+turn SELECT 2 80
 spin K1 -20
 tap LFO
 wait 50

@@ -168,7 +168,8 @@ int main(void)
     run(0, 11008);
     fm_key(5, 0);
     run(11008, 44032);
-    CHECK("余韻 long: still above -30 dB one second after key-up", db(peak_of(11008 + 44032 - 4410, 11008 + 44032)) > -30.0);
+    CHECK("余韻 long: one second after key-up still within 24 dB of the level at key-up",
+          db(peak_of(11008 + 44032 - 4410, 11008 + 44032)) > db(peak_of(11008 - 4410, 11008)) - 24.0);
     CHECK("and it decays", peak_of(11008 + 44032 - 4410, 11008 + 44032) < peak_of(11008, 11008 + 4410));
     fm_set(P_YOIN, 0);
 

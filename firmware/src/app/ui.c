@@ -163,6 +163,23 @@ static void oct_release(int which)
     ui.oct_role[which] = 0;
 }
 
+/* The three selectors move one step at a time, at most one every SEL_STEP_MS: on the FM-1 a single click of
+ * PRESETS sometimes arrived as two counts and skipped an instrument (1.0.2). A person clicks a detented
+ * encoder at well under 16 a second, so nothing deliberate is lost; a count inside the window is dropped. */
+#define SEL_STEP_MS 60u
+static int32_t sel_step(int role)
+{
+    static uint32_t next[NE];                      /* when the next step may be taken (0: at once) */
+    int32_t e = plat_enc(role);
+    uint32_t now = plat_ms();
+    if (e == 0)
+        return 0;
+    if ((int32_t)(now - next[role]) < 0)
+        return 0;
+    next[role] = now + SEL_STEP_MS;
+    return e > 0 ? 1 : -1;
+}
+
 static void sel_tap(void)                          /* 調律: 平均律 <-> 純正律 (whichever was on) */
 {
     if (proj.par[P_TUNING] == TN_EQUAL) {
@@ -271,11 +288,11 @@ static void input(void)
     if (btn || keys || ch)
         ui.act_t = plat_ms();
     midi_in();
-    if ((e = plat_enc(EN_SELECT)) != 0)            /* a detent is a step: no acceleration on these three */
+    if ((e = sel_step(EN_SELECT)) != 0)            /* a detent is a step: no acceleration on these three */
         knob_set(P_HON, proj.par[P_HON] + e);
-    if ((e = plat_enc(EN_PRESET)) != 0)          /* PRESETS picks the instrument, as players expect */
+    if ((e = sel_step(EN_PRESET)) != 0)          /* PRESETS picks the instrument, as players expect */
         knob_set(P_VOICE, proj.par[P_VOICE] + e);
-    if ((e = plat_enc(EN_ALGO)) != 0)
+    if ((e = sel_step(EN_ALGO)) != 0)
         knob_set(P_SCALE, proj.par[P_SCALE] + e);
     for (i = 0; i < 4; i++)
         if ((e = plat_enc(EN_K1 + (int)i)) != 0) {

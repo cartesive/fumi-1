@@ -79,7 +79,7 @@ script (the command list is at the top of `host/fumi_host.c`).
 form:
 
 - The unit reports a known-good identity: `python3 tools/fm1_install.py --info` (stock V15 is `FM-1_015`;
-  FuMi-1 0.1 is `FM-1_7000100`). Custom firmware expects the unit to have been on stock V15.
+  FuMi-1 1.0.2 is `FM-1_7010002`). Custom firmware expects the unit to have been on stock V15.
 - The official `FM-1.fwsc` (V15) is on this computer and its SHA-256 is
   `db1642b2b6fa5c2cccb11ffd13878068bb28601678d3644049f99dc40e7edb8a`. It is the way home; the installer
   page's "Back to the stock firmware" takes exactly that file.

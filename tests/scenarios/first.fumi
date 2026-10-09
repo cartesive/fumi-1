@@ -35,7 +35,7 @@ press OCT-
 release OCT-
 wait 50
 expect par6 0
-spin SELECT 3
+turn SELECT 3 80
 wait 50
 expect par0 7
 spin PRESET 1

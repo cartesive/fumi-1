@@ -181,6 +181,8 @@ static float vib_ph, vib_inc, vib_depth, vib_cur;
 static float trill_left, trill_period, trill_var;
 static uint32_t rnd = 0x1234567u;
 static smooth_t level_sm;
+#define OUT_TRIM 0.25f                             /* -12 dB at the output: 0.1 on the FM-1's speaker was far too loud
+                                                    * at the lowest MASTER setting (1.0.2) */
 static float level_cur;
 static float yo_mult;                             /* 余韻: the multiplier per sample after key-up */
 static float k_fast, k_slide;                     /* the voice smoother's coefficients: 12 ms, the slide time */
@@ -738,8 +740,8 @@ static void render_block(int32_t *out, float gain)
         }
         reverb(m * rev_send * 0.5f, &wl, &wr);
         lv += dlv;
-        l = (m + wl) * lv * gain;
-        r = (m + wr) * lv * gain;
+        l = (m + wl) * lv * gain * OUT_TRIM;
+        r = (m + wr) * lv * gain * OUT_TRIM;
         if (fm_fabsf(l) > pk)
             pk = fm_fabsf(l);
         out[2 * k] = (int32_t)(fm_tanhf(l) * 8300000.0f);
