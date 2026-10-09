@@ -15,6 +15,13 @@ cp build/emu/index.html build/emu/worklet.js build/emu/fumi.wasm "$OUT/emu/"
 cp build/bench/index.html build/bench/bench.js build/bench/syx.js build/bench/session.js build/bench/worklet.js build/bench/fumi.wasm "$OUT/bench/"
 SHA="$(git rev-parse --short HEAD)"
 DATE="$(date +%Y-%m-%d)"
+# cache busting: GitHub Pages caches for ten minutes and browsers keep the wasm and scripts longer; every
+# publish gives them a new query string so a plain reload gets the new build
+for f in "$OUT/emu/index.html" "$OUT/bench/bench.js"; do
+    sed -i '' "s#fetch(\"fumi.wasm\")#fetch(\"fumi.wasm?v=$SHA\")#; s#addModule(\"worklet.js\")#addModule(\"worklet.js?v=$SHA\")#" "$f"
+done
+sed -i '' "s#src=\"bench.js\"#src=\"bench.js?v=$SHA\"#; s#from \"./syx.js\"#from \"./syx.js?v=$SHA\"#; s#from \"./session.js\"#from \"./session.js?v=$SHA\"#" "$OUT/bench/index.html" "$OUT/bench/bench.js"
+grep -q "v=$SHA" "$OUT/emu/index.html" && grep -q "v=$SHA" "$OUT/bench/index.html" && grep -q "worklet.js?v=$SHA" "$OUT/bench/bench.js" || { echo "cache busting did not apply"; exit 1; }
 cat > "$OUT/index.html" <<HTML
 <!doctype html>
 <html lang="en">
