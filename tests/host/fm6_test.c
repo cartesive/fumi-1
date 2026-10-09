@@ -155,5 +155,20 @@ int main(void)
         }
     }
     CHECK("200 random records: unpack in range, pack(unpack) round trips", i == 200);
+    /* amplitude modulation sensitivity only ever lowers an operator: with the LFO's AMD at 0 an AMS 3 carrier
+     * plays at the same level as an AMS 0 one (msfa's constant 1.2% dip aside). A wrong scale in the AMS
+     * curve once drove flutes with AMS to eight times a full carrier */
+    {
+        float plain, ams;
+        make_init(v, 99);
+        plain = render(v, 6900.0f, 22050, 22050, 1);
+        v[5 * FP_OP + FP_AMS] = 3;
+        ams = render(v, 6900.0f, 22050, 22050, 1);
+        printf("  AMS 3 at AMD 0: %.3f of the AMS 0 level (msfa's constant dip is about 0.89)\n", (double)(ams / plain));
+        CHECK("AMS 3 with no LFO amplitude depth: within 1.5 dB of AMS 0", ams < plain * 1.02f && ams > plain * 0.84f);
+        v[FP_LAMD] = 99;
+        ams = render(v, 6900.0f, 22050, 22050, 1);
+        CHECK("AMS 3 with full LFO amplitude depth: never louder than AMS 0", ams <= plain * 1.02f);
+    }
     return tu_done("fm6");
 }

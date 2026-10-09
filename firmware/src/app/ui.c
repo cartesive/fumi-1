@@ -4,7 +4,7 @@
  *
  *   white keys     mi fa la ti do x 3 and a top mi (the ST-50's lower row)
  *   black keys     the upper row fa# sol ti-flat do# re, or ornaments (SEQ switches)
- *   SELECT 本数    ALGORITHM 音色 (voice)    PRESETS scale IN / YO / MIN'YO
+ *   SELECT 本数    PRESETS 音色 (voice)    ALGORITHM scale IN / YO / MIN'YO
  *   KNOB 1-4       the page's four values; HOME: 余韻, trill rate, vibrato depth, reverb
  *   LFO ビブラート   ARP トリラー   GLO 単音/和音   SEL 調律 (tap: 平均律 / 純正律; hold: the tuning page)
  *   OCT- / OCT+    a note held: pitch bend down / up (sprung); none held: octave down / up
@@ -273,9 +273,9 @@ static void input(void)
     midi_in();
     if ((e = plat_enc(EN_SELECT)) != 0)            /* a detent is a step: no acceleration on these three */
         knob_set(P_HON, proj.par[P_HON] + e);
-    if ((e = plat_enc(EN_ALGO)) != 0)
+    if ((e = plat_enc(EN_PRESET)) != 0)          /* PRESETS picks the instrument, as players expect */
         knob_set(P_VOICE, proj.par[P_VOICE] + e);
-    if ((e = plat_enc(EN_PRESET)) != 0)
+    if ((e = plat_enc(EN_ALGO)) != 0)
         knob_set(P_SCALE, proj.par[P_SCALE] + e);
     for (i = 0; i < 4; i++)
         if ((e = plat_enc(EN_K1 + (int)i)) != 0) {

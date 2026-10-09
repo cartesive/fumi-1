@@ -84,7 +84,7 @@ kbd { font: 600 .85em ui-monospace, Menlo, monospace; background: var(--card); b
     <ul>
       <li><b>White keys</b> mi fa la ti do, three times, and a top mi: the ST-50's lower row. The tonics (keys 1, 6, 11, 16) are lit.</li>
       <li><b>Black keys</b> the upper row (fa# sol ti-flat do# re), or ornaments when <b>SEQ</b> is on (vibrato, trill, damp, strong pluck).</li>
-      <li><b>SELECT</b> 本数 (the key), <b>ALGORITHM</b> the voice, <b>PRESETS</b> the scale (IN, YO, MIN'YO).</li>
+      <li><b>SELECT</b> 本数 (the key), <b>PRESETS</b> the instrument, <b>ALGORITHM</b> the scale (IN, YO, MIN'YO).</li>
       <li><b>KNOB 1–4</b> the four values on the screen: HOME 余韻, trill rate, vibrato depth, reverb; <b>FX</b> the sound page; <b>EDIT</b> the bend page.</li>
       <li><b>LFO</b> vibrato, <b>ARP</b> trill, <b>GLO</b> mono / poly, <b>SEL</b> tap: 平均律 / 純正律, hold: the tuning page.</li>
       <li><b>OCT−</b> / <b>OCT+</b> with a note held: bend down / up (sprung); with none: octave.</li>
@@ -214,7 +214,7 @@ function hit(c, cls) {
 const TIP = { FX: "Sound page: low cut, high cut, character, reverb size", SEL: "Tap: equal / Suiko tuning. Hold: the tuning page", ENV: "(free)",
   LFO: "Vibrato on / off", EDIT: "Bend page", GLO: "Mono / poly", HOME: "Home page", SAVE: "Save",
   ARP: "Trill on / off", SEQ: "Black keys: upper row / ornaments", PLAY: "(free)", REC: "(free)",
-  "OCT-": "A note held: bend down. None: octave down", "OCT+": "A note held: bend up. None: octave up", SELECT: "Hon (the key)", ALGORITHM: "Voice", PRESETS: "Scale",
+  "OCT-": "A note held: bend down. None: octave down", "OCT+": "A note held: bend up. None: octave up", SELECT: "Hon (the key)", PRESETS: "Voice", ALGORITHM: "Scale",
   MASTER: "Volume" };
 for (const [n, c] of [...Object.entries(buttons), ...Object.entries(knobs)]) if (TIP[n]) c.g.setAttribute("aria-description", TIP[n]);
 for (const k of Object.values(knobs)) hit(k, "knob");
