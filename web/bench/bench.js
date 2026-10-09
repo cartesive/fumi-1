@@ -657,7 +657,15 @@ async function switchOn() {
       const builtins = S.patches.splice(0);
       try { loadSession(saved); log(`restored the last session (${S.patches.length} patches)`); }
       catch { S.patches = builtins; }
-      for (const b of builtins) if (!S.patches.some((p) => p.source === b.source && p.name === b.name)) S.patches.push(b);
+      // the built-ins are always this build's: a saved copy with the same name gets the new bytes (notes and
+      // rating stay; an edited built-in should have been kept as new)
+      let updated = 0;
+      for (const b of builtins) {
+        const old = S.patches.find((p) => p.source === b.source && p.name === b.name);
+        if (!old) S.patches.push(b);
+        else if (!old.voice.every((x, i) => x === b.voice[i])) { old.voice = new Uint8Array(b.voice); old.pending = false; updated++; }
+      }
+      if (updated) log(`${updated} built-in patch(es) updated to this build's version`);
     }
     renderList();
     if (S.cur < 0 && S.patches.length) select(0, "to start");
