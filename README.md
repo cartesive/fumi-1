@@ -64,6 +64,10 @@ patches, every patch byte on a slider, the voicing stages (low cut, high cut, ch
 level-matched, notes and ratings per patch, a session file saved into `bench/sessions/`, and a `.syx` bank
 of the finalists to load on the FM-1's stock firmware for the speaker check.
 
+It is also online at **https://cartesive.github.io/fumi-1/bench/**: there the `.syx` banks and the recordings
+come from your own disk (Load .syx…, Load audio…) and stay in the browser; an exported session is a download
+to put into `bench/sessions/`.
+
 ## Tools
 
 - `tools/analyze_ref.py`: reference-audio analysis (pitch per note, spectral peaks, attack, click, decay, partials).

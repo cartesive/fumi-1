@@ -2,7 +2,7 @@
 // web/bench/session.js: the session file never carries the bytes of a patch that came from someone else's
 // .syx (or was derived from one); such patches travel as a fingerprint plus notes and ratings, and get their
 // bytes back when the same .syx is loaded again. FuMi's own patches travel whole.
-import { fingerprint, serialize, deserialize, reattach, derivedFrom } from "../../web/bench/session.js";
+import { fingerprint, serialize, deserialize, reattach, derivedFrom, alreadyLoaded } from "../../web/bench/session.js";
 
 let fail = 0;
 const check = (what, ok) => { console.log(`  ${ok ? "ok  " : "FAIL"} ${what}`); if (!ok) fail++; };
@@ -31,5 +31,11 @@ const found = reattach(back, [{ name: "KOTO", packed: bytes(2) }, { name: "OTHER
 check("loading the .syx again reattaches the bytes to the pending patch by fingerprint", found === 1 && back[1].packed && back[1].pending === false);
 check("the reattached patch keeps its notes", back[1].notes.body === "warm");
 
+// loading refs/ again after a restore must not add the same voices a second time
+const have = [{ source: "rom1a.syx", packed: bytes(2), pending: false }, { source: "rom1a.syx", packed: null, pending: true, fp: fingerprint(bytes(4)) }];
+check("a voice already in the list from the same file is a duplicate", alreadyLoaded(have, "rom1a.syx", bytes(2)) === true);
+check("the same bytes from another file are not", alreadyLoaded(have, "other.syx", bytes(2)) === false);
+check("a pending patch waiting for these bytes is not a duplicate (it gets reattached)", alreadyLoaded(have, "rom1a.syx", bytes(4)) === false);
+check("new bytes are not", alreadyLoaded(have, "rom1a.syx", bytes(5)) === false);
 console.log(fail ? `session: ${fail} FAILED` : "session: all passed");
 process.exit(fail ? 1 : 0);

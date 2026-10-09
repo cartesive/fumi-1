@@ -41,3 +41,10 @@ export function reattach(patches, voices) {
   }
   return n;
 }
+
+// a voice from this file is already in the list (loaded before, or restored with its bytes): skip it.
+// A pending patch (bytes stripped from the session file) is not a duplicate: reattach() wants those bytes.
+export function alreadyLoaded(patches, source, packed) {
+  const fp = fingerprint(packed);
+  return patches.some((p) => p.source === source && !p.pending && p.packed && fingerprint(p.packed) === fp);
+}

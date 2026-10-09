@@ -6,7 +6,7 @@
 // reference clips from refs/ level-matched, notes and ratings per patch, a session file for the repo, and a
 // DX7 .syx bank of the finalists for the stock firmware.
 import { FP, parseSyx, makeBank, pack, unpack, initVoice, morph, voiceName, setVoiceName, opOffset, byteMax, CARRIERS } from "./syx.js";
-import { serialize, deserialize, reattach, derivedFrom } from "./session.js";
+import { serialize, deserialize, reattach, derivedFrom, alreadyLoaded } from "./session.js";
 
 "use strict";
 const $ = (id) => document.getElementById(id);
@@ -298,6 +298,8 @@ function reattachVoices(voices) {
   const n = reattach(S.patches, voices.map((v) => ({ name: v.name, packed: v.packed })));
   if (n) { S.patches.forEach((p) => { if (!p.pending && p.packed && p.fp) p.voice = unpack(p.packed); }); log(`${n} patches from the last session got their bytes back`); }
 }
+// the list as alreadyLoaded() wants it: source, pending and the packed bytes of each patch
+function packedList() { return S.patches.map((p) => ({ source: p.source, pending: p.pending, packed: p.pending ? null : pack(p.voice) })); }
 function download(name, bytes, type) {
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob([bytes], { type }));
@@ -311,7 +313,7 @@ async function exportSession() {
   try {
     const r = await fetch(`/bench/sessions/${name}`, { method: "POST", body: txt, headers: { "Content-Type": "application/json" } });
     log(r.ok ? `session saved to bench/sessions/${name} (and downloaded)` : `session downloaded (the server did not keep it: ${r.status})`);
-  } catch { log("session downloaded (no local server: run web/bench/serve.py to keep it in the repo)"); }
+  } catch { log(hosted ? "session downloaded: put it in bench/sessions/ of the repo" : "session downloaded (no local server: run web/bench/serve.py to keep it in the repo)"); }
 }
 function exportSyx() {
   const list = S.patches.filter((p) => p.exp && !p.pending);
@@ -324,13 +326,16 @@ async function loadSyxFiles(files) {
     try {
       const voices = parseSyx(new Uint8Array(await f.arrayBuffer()), f.name);
       reattachVoices(voices);
-      voices.forEach((v) => addPatch(newPatch(v.voice, f.name, { rom: true }), true));
-      log(`loaded ${voices.length} voices from ${f.name}`);
+      const have = packedList();
+      const fresh = voices.filter((v) => !alreadyLoaded(have, f.name, v.packed));
+      fresh.forEach((v) => addPatch(newPatch(v.voice, f.name, { rom: true }), true));
+      log(`loaded ${fresh.length} voices from ${f.name}${fresh.length < voices.length ? ` (${voices.length - fresh.length} already here)` : ""}`);
     } catch (e) { log(`refused ${f.name}: ${e.message}`); alert(e.message); }
   }
   renderList();
   autoAB();
 }
+let hosted = false;                                       // no local server (the page is on GitHub Pages or a plain file server)
 async function loadRefs() {
   try {
     const r = await fetch("/refs/list");
@@ -338,14 +343,27 @@ async function loadRefs() {
     const list = await r.json();
     for (const name of list.syx) {
       const b = new Uint8Array(await (await fetch(`/refs/${encodeURIComponent(name)}`)).arrayBuffer());
-      try { const vs = parseSyx(b, name); reattachVoices(vs); vs.forEach((v) => addPatch(newPatch(v.voice, name, { rom: true }), true)); log(`loaded ${name}`); }
+      try {
+        const vs = parseSyx(b, name);
+        reattachVoices(vs);
+        const have = packedList();
+        const fresh = vs.filter((v) => !alreadyLoaded(have, name, v.packed));
+        fresh.forEach((v) => addPatch(newPatch(v.voice, name, { rom: true }), true));
+        log(fresh.length ? `loaded ${name}` : `${name}: already here`);
+      }
       catch (e) { log(`refused ${name}: ${e.message}`); }
     }
     renderClips(list.audio);
     renderList();
     autoAB();
     if (!list.syx.length) log("refs/ holds no .syx (put the DX7 bank with KOTO and HARP 2 there)");
-  } catch { log("no local server: run web/bench/serve.py from the repo to load refs/ (or use Load .syx)"); }
+  } catch {
+    hosted = true;
+    $("refsload").hidden = true;
+    renderClips([]);
+    log(location.hostname.endsWith("github.io") ? "hosted bench: load the DX7 bank with Load .syx… and the ST-50 recordings with Load audio…; nothing is uploaded, it all stays in this browser"
+                                                : "no local server: run web/bench/serve.py from the repo to load refs/ (or use Load .syx… and Load audio…)");
+  }
 }
 function autoAB() {                                         // KOTO and HARP 2, if they arrived: A, B and the first hybrids
   if (S.a >= 0 || S.b >= 0) return;
@@ -473,11 +491,18 @@ $("phrasestop").addEventListener("click", phraseStop);
 
 // ---------------------------------------------------------------- reference clips
 let clipSrc = null, clipGain = null, clipRms = 0, engineRms = 0.02;
+const clipFiles = new Map();                                // name -> File picked with Load audio… (never uploaded anywhere)
+let clipNames = [];
 function renderClips(names) {
+  clipNames = [...new Set([...clipNames, ...names])];
   const box = $("clips");
   box.innerHTML = "";
-  if (!names.length) { box.innerHTML = '<p class="hint">No audio in refs/. Put the ST-50 recordings there (they stay out of git).</p>'; return; }
-  for (const n of names) {
+  if (!clipNames.length) {
+    box.innerHTML = hosted ? '<p class="hint">No clips yet. Load audio… brings in the ST-50 recordings from your disk; they stay in this browser.</p>'
+                           : '<p class="hint">No audio in refs/. Put the ST-50 recordings there (they stay out of git), or use Load audio….</p>';
+    return;
+  }
+  for (const n of clipNames) {
     const d = document.createElement("div");
     d.className = "clip";
     d.innerHTML = `<span title="${esc(n)}">${esc(n.length > 28 ? n.slice(0, 26) + "…" : n)}</span><input type="number" step="0.1" min="0" placeholder="from s"><input type="number" step="0.1" min="0" placeholder="to s"><button>Play</button>`;
@@ -493,7 +518,8 @@ async function playClip(name, from, to) {
   let buf = clipCache.get(name);
   if (!buf) {
     $("status").textContent = `decoding ${name}…`;
-    buf = await ac.decodeAudioData(await (await fetch(`/refs/${encodeURIComponent(name)}`)).arrayBuffer());
+    const f = clipFiles.get(name);
+    buf = await ac.decodeAudioData(f ? await f.arrayBuffer() : await (await fetch(`/refs/${encodeURIComponent(name)}`)).arrayBuffer());
     clipCache.set(name, buf);
     $("status").textContent = "On.";
   }
@@ -520,6 +546,12 @@ function clipGainValue() {
 }
 function clipStop() { try { clipSrc?.stop(); } catch {} clipSrc = null; }
 $("clipstop").addEventListener("click", clipStop);
+$("loadaudio").addEventListener("click", () => $("audiofile").click());
+$("audiofile").addEventListener("change", (e) => {
+  const names = [...e.target.files].map((f) => { clipFiles.set(f.name, f); clipCache.delete(f.name); return f.name; });
+  renderClips(names);
+  log(`${names.length} clip(s) ready: ${names.join(", ")}`);
+});
 $("cliplevel").addEventListener("input", () => { if (clipGain) clipGain.gain.value = clipGainValue(); });
 
 // ---------------------------------------------------------------- MIDI

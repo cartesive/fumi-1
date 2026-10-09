@@ -1,16 +1,18 @@
 #!/bin/sh
 # SPDX-License-Identifier: GPL-3.0-only
-# Publish the browser emulator alone to GitHub Pages (the gh-pages branch of origin): a small landing page and
-# build/emu. The full site (installer, firmware download) is M7 work: tools/make_pages.py still carries FoMni's
-# text and is not used here.
+# Publish the browser emulator and the audition bench to GitHub Pages (the gh-pages branch of origin): a small
+# landing page, build/emu and build/bench (without serve.py: on the site the bench takes .syx and recordings
+# from the visitor's disk and keeps everything in the browser). The full site (installer, firmware download)
+# is M7 work: tools/make_pages.py still carries FoMni's text and is not used here.
 #   tools/publish_emu.sh            -> https://cartesive.github.io/fumi-1/
 set -e
 cd "$(dirname "$0")/.."
 sh web/emu/build.sh
 OUT=build/pages
 rm -rf "$OUT"
-mkdir -p "$OUT/emu"
+mkdir -p "$OUT/emu" "$OUT/bench"
 cp build/emu/index.html build/emu/worklet.js build/emu/fumi.wasm "$OUT/emu/"
+cp build/bench/index.html build/bench/bench.js build/bench/syx.js build/bench/session.js build/bench/worklet.js build/bench/fumi.wasm "$OUT/bench/"
 SHA="$(git rev-parse --short HEAD)"
 DATE="$(date +%Y-%m-%d)"
 cat > "$OUT/index.html" <<HTML
@@ -39,6 +41,10 @@ and a top mi; the black keys its upper row or koto ornaments; the key is set in 
 <p>It is the firmware itself running in the page, at the FM-1's 44.1 kHz. White keys <b>Q–I</b> and <b>A–K</b>,
 black keys <b>1–0 −</b>, <b>Z</b>/<b>X</b> OCT−/OCT+ (a sprung bend while a note is held), <b>Shift</b> vibrato,
 <b>/</b> trill, arrows turn SELECT (本数).</p>
+<p><a href="bench/">The audition bench</a> is the voicing tool: the same engine, with a patch editor, DX7
+<code>.syx</code> import, blind A/B, morphs and hybrids, notes and ratings, and reference clips matched to the
+engine's loudness. It reads <code>.syx</code> banks and recordings from your own disk and keeps them in your
+browser; nothing is uploaded. A session file exported from it is what the voicing rounds work from.</p>
 <p><b>Status:</b> early. The pitch core, the engine and the audition bench are done on the host; the koto voice is
 being auditioned; nothing has been flashed to an FM-1 yet, and there is no installer page. Source, research and
 plan: <a href="https://github.com/cartesive/fumi-1">github.com/cartesive/fumi-1</a> (GPL-3.0).</p>
@@ -53,10 +59,10 @@ cd "$OUT"
 rm -rf .git
 git init -q -b gh-pages
 git add -A
-git -c user.name=cartesive -c user.email=claude.code@beatgroover.com commit -q -m "Emulator site (from $SHA)"
+git -c user.name=cartesive -c user.email=claude.code@beatgroover.com commit -q -m "Emulator and bench site (from $SHA)"
 git push -q -f "$REMOTE" gh-pages
 rm -rf .git
 REPO="$(printf %s "$REMOTE" | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')"
 gh api -X POST "repos/$REPO/pages" -f 'source[branch]=gh-pages' -f 'source[path]=/' >/dev/null 2>&1 || \
     gh api -X POST "repos/$REPO/pages/builds" >/dev/null 2>&1 || echo "(could not ask GitHub Pages to build: check the repository's Pages settings)"
-echo "pushed the emulator site from $SHA to gh-pages"
+echo "pushed the emulator and bench site from $SHA to gh-pages"
