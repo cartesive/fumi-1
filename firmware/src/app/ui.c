@@ -8,18 +8,22 @@
  *   KNOB 1-4       the page's four values; HOME: 余韻, trill rate, vibrato depth, reverb
  *   LFO ビブラート   ARP トリラー   GLO 単音/和音   SEL 調律 (tap: 平均律 / 純正律; hold: the tuning page)
  *   OCT- / OCT+    a note held: pitch bend down / up (sprung); none held: octave down / up
- *   HOME FX EDIT   the pages: HOME, SOUND, BEND.  SAVE saves (and it autosaves when quiet)
+ *   HOME FX EDIT   the pages: HOME, SOUND, BEND.  ENV: the LOOP page.  SAVE saves (and it autosaves when quiet)
+ *   REC            the looper (fumi.h): tap: arm (the first key starts the loop) / close / overdub on, off;
+ *                  held 1 s: clear.   PLAY  tap: stop / start from the top; held 1 s: undo the top layer
  *   OCT- + OCT+ held 5 s: update mode (main_fm1.c; never reassigned) */
 
-enum { V_HOME, V_SOUND, V_BEND, V_TUNING, NVIEWS };
-static const char *const VIEW_NAME[NVIEWS] = {"Home", "Sound", "Bend", "Tuning"};
+enum { V_HOME, V_SOUND, V_BEND, V_TUNING, V_LOOP, NVIEWS };
+static const char *const VIEW_NAME[NVIEWS] = {"Home", "Sound", "Bend", "Tuning", "Loop"};
 #define K_NONE 255
 static const uint8_t VIEW_KNOB[NVIEWS][4] = {
     {P_YOIN, P_TRILL_RATE, P_VIB_DEPTH, P_REVERB},
     {P_LOWCUT, P_HIGHCUT, P_CHARACTER, P_REV_SIZE},
     {P_BEND_UP, P_BEND_DOWN, P_BEND_TIME, P_SLIDE_TIME},
     {P_TUNING, P_DEPTH, P_FINE, P_A4},
+    {P_LOOP_BPM, P_LOOP_BEATS, P_LOOP_CLICK, K_NONE},
 };
+#define HOLD_MS 1000u                              /* REC / PLAY held this long: clear / undo */
 
 static const uint8_t WHITE_K[FM_NWHITE] = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26};
 static const uint8_t BLACK_K[FM_NBLACK] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};
@@ -45,6 +49,7 @@ static struct {
     uint32_t btn, keys, btn_used;
     uint32_t enc_t[NE];
     uint32_t sel_t;                    /* SEL pressed at (its hold opens the tuning page) */
+    uint32_t hold_t[2];                /* REC, PLAY pressed at (held: clear, undo) */
     uint8_t oct_role[2];               /* OCT- / OCT+ while held: 0 up, 1 bend, 2 octave */
     uint8_t tuning_prev;               /* the 純正律 to come back to after a tap to 平均律 */
     uint8_t dirty;
@@ -191,12 +196,64 @@ static void sel_tap(void)                          /* 調律: 平均律 <-> 純�
     say("TUNING", TN_NAME[proj.par[P_TUNING]]);
 }
 
+static void loop_rec_tap(void)                     /* what the tap will do, said now; the engine does it */
+{
+    switch (fm_loop_state) {
+    case LP_IDLE: say("LOOP", "ARMED: PLAY"); break;
+    case LP_ARMED: say("LOOP", "CANCELLED"); break;
+    case LP_REC: say("LOOP", "CLOSED"); break;
+    case LP_DUB: say("OVERDUB", "OFF"); break;
+    default: say("OVERDUB", "ON"); break;
+    }
+    fm_loop_rec();
+}
+
+static void loop_play_tap(void)
+{
+    switch (fm_loop_state) {
+    case LP_IDLE: say("LOOP", "EMPTY"); return;
+    case LP_ARMED: say("LOOP", "CANCELLED"); break;
+    case LP_REC: say("LOOP", "CLOSED"); break;
+    case LP_STOP: say("LOOP", "PLAYING"); break;
+    default: say("LOOP", "STOPPED"); break;
+    }
+    fm_loop_play();
+}
+
+/* REC and PLAY held: the clear and the undo, each announced at 400 ms and done at HOLD_MS (the tap on release
+ * is then not taken). Nothing to do: the hold is still used up, so the release does not arm or stop. */
+static void loop_hold(int which, uint32_t now)     /* which: 0 REC, 1 PLAY */
+{
+    uint32_t b = which ? B_PLAY : B_REC, m = 1u << b, dt;
+    if (!(ui.btn & m) || (ui.btn_used & m))
+        return;
+    dt = now - ui.hold_t[which];
+    if (dt > HOLD_MS) {
+        ui.btn_used |= m;
+        if (which) {
+            if (fm_loop_layers > 1u)
+                say("LOOP", "UNDONE");
+            else
+                say("LOOP", fm_loop_layers ? "EMPTIED" : "EMPTY");
+            fm_loop_undo();
+        } else {
+            say("LOOP", fm_loop_state == LP_IDLE ? "EMPTY" : "CLEARED");
+            fm_loop_clear();
+        }
+    } else if (dt > 400u && fm_loop_state != LP_IDLE) {
+        say(which ? "UNDO?" : "CLEAR LOOP?", "KEEP HOLDING");
+    }
+}
+
 static void button(int b)                          /* on release, unless the press was used */
 {
     switch (b) {
     case B_HOME: set_view(V_HOME); break;
     case B_FX: set_view(V_SOUND); break;
     case B_EDIT: set_view(V_BEND); break;
+    case B_ENV: set_view(V_LOOP); break;
+    case B_REC: loop_rec_tap(); break;
+    case B_PLAY: loop_play_tap(); break;
     case B_SEL: sel_tap(); break;
     case B_LFO: toggle(P_VIB_ON, "VIBRATO"); break;
     case B_ARP: toggle(P_TRILL_ON, "TRILL"); break;
@@ -275,6 +332,8 @@ static void input(void)
                 oct_press(i == B_OCTUP);
             else if (i == B_SEL)
                 ui.sel_t = plat_ms();
+            else if (i == B_REC || i == B_PLAY)
+                ui.hold_t[i == B_PLAY] = plat_ms();
         } else if (i == B_OCTDN || i == B_OCTUP) {
             oct_release(i == B_OCTUP);
         } else if (!(ui.btn_used & m)) {
@@ -285,6 +344,8 @@ static void input(void)
         ui.btn_used |= 1u << B_SEL;                /* SEL held: the tuning page, no toggle on release */
         set_view(V_TUNING);
     }
+    loop_hold(0, plat_ms());
+    loop_hold(1, plat_ms());
     if (btn || keys || ch)
         ui.act_t = plat_ms();
     midi_in();
@@ -345,7 +406,7 @@ static void draw_header(void)
     int msg = plat_ms() < ui.msg_until;
     uint32_t h = hash(hash(2166136261u, ui.view), (uint32_t)proj.par[P_VIB_ON] | (uint32_t)proj.par[P_TRILL_ON] << 1 |
                                                    (uint32_t)proj.par[P_MONO] << 2 | (uint32_t)proj.par[P_BLACK] << 3 |
-                                                   (uint32_t)ui.dirty << 4 | (uint32_t)msg << 5);
+                                                   (uint32_t)ui.dirty << 4 | (uint32_t)msg << 5 | (uint32_t)fm_loop_state << 6);
     if (msg)
         h = hash(hash(h, (uint32_t)ui.msg[0][0] << 8 | ui.msg[0][1]), ui.msg_until);
     if (h == ui.sig[0])
@@ -357,10 +418,18 @@ static void draw_header(void)
         cv_text(x + 8, 6, &FONT_B, ui.msg[1], K_KOTO);
     } else {
         static const char *const TAG[4] = {"VIB", "TRILL", "MONO", "ORN"};
+        static const char *const LTAG[LP_NSTATE] = {"", "ARM", "REC", "LOOP", "DUB", "STOP"};
         int on[4] = {proj.par[P_VIB_ON], proj.par[P_TRILL_ON], proj.par[P_MONO], proj.par[P_BLACK]}, i;
         int32_t x = 10;
         cv_text(x, 6, &FONT_B, ui.view == V_HOME ? "FuMi-1" : VIEW_NAME[ui.view], K_TEXT);
         x = 232;
+        if (fm_loop_state != LP_IDLE) {            /* the looper, rightmost: red while it records */
+            int rec = fm_loop_state == LP_REC || fm_loop_state == LP_DUB;
+            int32_t w = text_w(&FONT_XS, LTAG[fm_loop_state]) + 10;
+            x -= w + 4;
+            cv_round(x, 6, w, 16, 6, rec ? K_KOTO : K_KOTO_T);
+            cv_text(x + 5, 7, &FONT_XS, LTAG[fm_loop_state], rec ? K_WHITE : K_KOTO);
+        }
         for (i = 3; i >= 0; i--) {
             int32_t w = text_w(&FONT_XS, TAG[i]) + 10;
             if (!on[i])
@@ -388,6 +457,12 @@ static void draw_keys(int32_t y0, int32_t h)
     }
 }
 
+static uint32_t loop_max_blocks(void)            /* the ruler: beats x 60 / BPM, in blocks of 32 (as the engine) */
+{
+    uint32_t b = (uint32_t)(60.0f * 44100.0f / 32.0f * (float)proj.par[P_LOOP_BEATS] / (float)proj.par[P_LOOP_BPM]);
+    return b ? b : 1u;
+}
+
 static void draw_main(void)
 {
     char t[16];
@@ -395,9 +470,11 @@ static void draw_main(void)
     int i;
     for (s = 0; s < FM_NWHITE; s++)
         h = hash(h, (uint32_t)(fm_key_level[s] * 24.0f));
+    uint32_t lp_state = fm_loop_state, lp_len = fm_loop_len, lp_pos = fm_loop_pos, lp_q;   /* one read each */
+    lp_q = lp_state == LP_REC || lp_state == LP_ARMED ? lp_pos * 54u / loop_max_blocks() : lp_len ? lp_pos * 54u / lp_len : 0u;
     h = hash(hash(h, (uint32_t)proj.par[P_HON] | (uint32_t)proj.par[P_VOICE] << 8 | (uint32_t)proj.par[P_TUNING] << 16 |
                           (uint32_t)proj.par[P_SCALE] << 20 | (uint32_t)(proj.par[P_OCTAVE] + 1) << 24),
-             (uint32_t)(fm_bend_cents * 4.0f + 1000.0f) | (uint32_t)fm_patch_custom << 16);
+             (uint32_t)(fm_bend_cents * 4.0f + 1000.0f) | (uint32_t)fm_patch_custom << 16 | lp_state << 20 | lp_q << 24);
     for (s = 0; s < 10u && fm_patch_label[s]; s++)   /* the whole name: the render adopts a patch a frame after the
                                                       * slot changes, and Sho and Shakuhachi start alike (1.0.3) */
         h = hash(h, (uint32_t)fm_patch_label[s] | s << 8);
@@ -452,6 +529,11 @@ static void draw_main(void)
     draw_keys(98, 22);
     for (i = 0; i < FM_NWHITE; i++)              /* the degree under each key, the tonics' row marked */
         text_c(12 + i * 14, 124, &FONT_XS, DEG_NAME[i % 5], (i % 5) ? K_DIM : K_TEXT);
+    if (lp_state != LP_IDLE) {                   /* the loop: where it is in its length (recording: in the ruler's) */
+        int rec = lp_state == LP_REC || lp_state == LP_DUB;
+        cv_round(12, 138, 216, 4, 2, K_LINE);
+        cv_round(12, 138, (int32_t)(lp_q * 4u) + 4, 4, 2, rec ? K_KOTO : lp_state == LP_STOP ? K_DIM : K_TONIC);
+    }
     cv_blit(0, MAIN_Y);
 }
 
@@ -508,8 +590,14 @@ static void draw_knobs(void)
 static void leds(void)
 {
     uint32_t b = 0, k = 0, i;
-    static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_FX, B_EDIT, B_SEL};
+    static const uint8_t VIEW_BTN[NVIEWS] = {B_HOME, B_FX, B_EDIT, B_SEL, B_ENV};
+    uint32_t lp = fm_loop_state;
     b |= 1u << VIEW_BTN[ui.view];
+    if (lp == LP_REC || lp == LP_DUB || (lp == LP_ARMED && (plat_ms() / 250u) & 1u))   /* REC: lit, blinking when armed */
+        b |= 1u << B_REC;
+    if (lp == LP_PLAY || lp == LP_DUB)
+        b |= 1u << B_PLAY;
+    plat_play_red(lp == LP_REC || lp == LP_DUB);
     if (proj.par[P_VIB_ON])
         b |= 1u << B_LFO;
     if (proj.par[P_TRILL_ON])
@@ -538,6 +626,8 @@ static void autosave(void)
     uint32_t now = plat_ms();
     if (!ui.dirty || ui.btn || ui.keys || now - ui.act_t < AUTOSAVE_QUIET || fm_nvoices)
         return;
+    if (fm_loop_state != LP_IDLE && fm_loop_state != LP_STOP)
+        return;                                    /* the loop is running: a flash erase would silence it */
     if (project_save() == 0) {
         ui.dirty = 0;
         ui.saved_t = now;

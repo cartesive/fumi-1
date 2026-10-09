@@ -34,6 +34,7 @@ enum {
     P_MONO, P_BLACK, P_BEND_UP, P_BEND_DOWN, P_BEND_TIME, P_SLIDE, P_SLIDE_TIME,
     P_LOWCUT, P_HIGHCUT, P_CHARACTER, P_REVERB, P_REV_SIZE, P_MIDI_OUT,
     P_USER0, P_USER1, P_USER2, P_USER3, P_USER4, P_USER5, P_USER6, P_USER7, P_USER8, P_USER9, P_USER10, P_USER11,
+    P_LOOP_BPM, P_LOOP_BEATS, P_LOOP_CLICK,                              /* the looper's ruler and its click */
     P_NPARAMS
 };
 typedef struct {
@@ -54,6 +55,18 @@ void fm_note(int id, int on, float cents);       /* any pitch (cents from A4): M
 void fm_ornament(int orn, int on);               /* momentary techniques on the sounding notes */
 void fm_bend(int which, int down, int note_held);   /* OCT- / OCT+ (bend.h BEND_DOWN / BEND_UP) */
 void fm_panic(void);
+/* the looper: REC arms, the first key starts the loop; REC again closes it (or the ruler does, at BPM x beats)
+ * and it plays; REC while playing overdubs on a new layer; PLAY stops and starts from the top; undo takes the
+ * top layer; clear empties it. Keys, ornaments and the bend buttons are recorded with their timing from the audio
+ * clock; the loop stores keys, not pitches, so 本数 and 調律 retune it. One instrument; the loop lives in RAM. */
+enum { LP_IDLE, LP_ARMED, LP_REC, LP_PLAY, LP_DUB, LP_STOP, LP_NSTATE };
+void fm_loop_rec(void);                          /* the REC tap */
+void fm_loop_play(void);                         /* the PLAY tap */
+void fm_loop_undo(void);                         /* PLAY held: the top layer goes */
+void fm_loop_clear(void);                        /* REC held */
+extern volatile uint8_t fm_loop_state, fm_loop_layers;                /* LP_*, layers recorded */
+extern volatile uint32_t fm_loop_pos, fm_loop_len, fm_loop_events;   /* position and length in blocks of 32; events */
+
 void fm_patch_set(const uint8_t *packed128);     /* the current patch (a DX7-format packed voice) */
 void fm_patch_get(uint8_t *packed128);           /* main loop: the patch the render uses */
 int fm_patch_count(void);                        /* FuMi's own patches (P_VOICE) */

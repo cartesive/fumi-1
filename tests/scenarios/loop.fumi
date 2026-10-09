@@ -1,0 +1,66 @@
+# the looper on REC and PLAY: REC arms, the first key starts the loop, REC closes it, REC again overdubs, PLAY
+# stops and starts, PLAY held undoes the top layer, REC held clears. ENV is the Loop page (BPM, beats, click).
+wait 300
+tap REC
+wait 50
+expect loop_state 1
+key w5 down
+wait 500
+key w5 up
+wait 50
+expect loop_state 2
+wait 1500
+tap REC
+wait 50
+expect loop_state 3
+expect loop_len >2500
+expect loop_layers 1
+leds
+tap REC
+wait 50
+expect loop_state 4
+key w7 down
+wait 300
+key w7 up
+wait 100
+tap REC
+wait 50
+expect loop_state 3
+expect loop_layers 2
+expect loop_events 4
+shot home-loop.png
+tap ENV
+wait 50
+expect view 4
+shot loop.png
+press PLAY
+wait 1200
+release PLAY
+wait 50
+expect loop_layers 1
+expect loop_events 2
+tap PLAY
+wait 50
+expect loop_state 5
+tap PLAY
+wait 50
+expect loop_state 3
+# no autosave while the loop runs: a change stays unsaved
+spin K2 2
+wait 50
+expect dirty 1
+wait 5000
+expect dirty 1
+expect store_writes 0
+press REC
+wait 1200
+release REC
+wait 50
+expect loop_state 0
+expect loop_events 0
+wait 5000
+expect dirty 0
+expect store_writes 1
+tap HOME
+wait 50
+expect view 0

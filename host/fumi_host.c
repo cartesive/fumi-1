@@ -21,7 +21,7 @@
  *   leds                         print the lit buttons and keys
  *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
  *     WHAT: view parN (fumi.h P_*) dirty store_writes midi_out nvoices bend10 (cents x 10) keylevelK (x 100)
- *           custom peak_db_max peak_db_min screen
+ *           custom peak_db_max peak_db_min screen loop_state loop_len loop_pos loop_layers loop_events
  *   reboot                       re-run boot from the simulated flash (persistence test)
  */
 #define OM_HOST 1
@@ -373,6 +373,16 @@ static int expect(const char *what, const char *val)
         got = fm_nvoices;
     else if (!strcmp(what, "custom"))
         got = fm_patch_custom;
+    else if (!strcmp(what, "loop_state"))
+        got = fm_loop_state;
+    else if (!strcmp(what, "loop_len"))
+        got = (int)fm_loop_len;
+    else if (!strcmp(what, "loop_pos"))
+        got = (int)fm_loop_pos;
+    else if (!strcmp(what, "loop_layers"))
+        got = fm_loop_layers;
+    else if (!strcmp(what, "loop_events"))
+        got = (int)fm_loop_events;
     else if (!strcmp(what, "bend10"))
         got = (int)(fm_bend_cents * 10.0f);
     else if (!strncmp(what, "par", 3))            /* parN: parameter N (fumi.h P_*) */

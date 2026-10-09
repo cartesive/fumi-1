@@ -211,9 +211,9 @@ function hit(c, cls) {
   c.hit = d;
 }
 // what each control does, on hover (the Buttons list below says the same)
-const TIP = { FX: "Sound page: low cut, high cut, character, reverb size", SEL: "Tap: equal / Suiko tuning. Hold: the tuning page", ENV: "(free)",
+const TIP = { FX: "Sound page: low cut, high cut, character, reverb size", SEL: "Tap: equal / Suiko tuning. Hold: the tuning page", ENV: "Loop page: BPM, beats, click",
   LFO: "Vibrato on / off", EDIT: "Bend page", GLO: "Mono / poly", HOME: "Home page", SAVE: "Save",
-  ARP: "Trill on / off", SEQ: "Black keys: upper row / ornaments", PLAY: "(free)", REC: "(free)",
+  ARP: "Trill on / off", SEQ: "Black keys: upper row / ornaments", PLAY: "Looper: stop / start from the top. Hold: undo the last layer", REC: "Looper: arm (the first key starts it) / close / overdub on, off. Hold: clear",
   "OCT-": "A note held: bend down. None: octave down", "OCT+": "A note held: bend up. None: octave up", SELECT: "Hon (the key)", PRESETS: "Voice", ALGORITHM: "Scale",
   MASTER: "Volume" };
 for (const [n, c] of [...Object.entries(buttons), ...Object.entries(knobs)]) if (TIP[n]) c.g.setAttribute("aria-description", TIP[n]);

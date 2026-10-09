@@ -10,7 +10,7 @@
 #define FM_VERSION "DEV"
 #endif
 #define PROJ_MAGIC 0x314D7546u           /* "FuM1" */
-#define PROJ_FORMAT 1u
+#define PROJ_FORMAT 2u                   /* 2: the looper's parameters (1.0.4); an older project gives the defaults */
 
 typedef struct {
     uint32_t magic, format;

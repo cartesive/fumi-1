@@ -37,6 +37,7 @@ static const fm_param_t PARAMS[P_NPARAMS] = {
     {"User mi", -50, 50, 0}, {"User fa", -50, 50, 0}, {"User fa#", -50, 50, 0}, {"User sol", -50, 50, 0},
     {"User 4", -50, 50, 0}, {"User la", -50, 50, 0}, {"User tib", -50, 50, 0}, {"User ti", -50, 50, 0},
     {"User do", -50, 50, 0}, {"User do#", -50, 50, 0}, {"User re", -50, 50, 0}, {"User 11", -50, 50, 0},
+    {"Loop BPM", 30, 120, 60}, {"Loop beats", 8, 64, 32}, {"Click", 0, 1, 0},
 };
 const fm_param_t *fm_param_info(int p) { return (p >= 0 && p < P_NPARAMS) ? &PARAMS[p] : &PARAMS[0]; }
 
@@ -78,18 +79,20 @@ void fm_param_text(int p, int v, char *b)
     case P_SCALE: copy_s(SC_NAME[v], b, 11); return;
     case P_TUNING: copy_s(TN_NAME[v], b, 11); return;
     case P_VOICE: copy_s(FM_PATCH_NAME[v], b, 11); return;
-    case P_VIB_ON: case P_TRILL_ON: case P_MONO: case P_SLIDE: case P_MIDI_OUT: copy_s(ONOFF[v ? 1 : 0], b, 11); return;
+    case P_VIB_ON: case P_TRILL_ON: case P_MONO: case P_SLIDE: case P_MIDI_OUT: case P_LOOP_CLICK:
+        copy_s(ONOFF[v ? 1 : 0], b, 11);
+        return;
     case P_BEND_UP: copy_s(BENDT[v], b, 11); return;
     case P_BLACK: copy_s(BLACKM[v], b, 11); return;
     default: break;
     }
-    if ((p == P_FINE || p == P_OCTAVE || p >= P_USER0) && v > 0)
+    if ((p == P_FINE || p == P_OCTAVE || (p >= P_USER0 && p <= P_USER11)) && v > 0)
         *b++ = '+';
     itoa_s(v, b);
 }
 
 /* ----------------------------------------------------------- commands --- */
-enum { C_SET, C_KEY, C_NOTE, C_ORN, C_BEND, C_PANIC, C_PATCH };
+enum { C_SET, C_KEY, C_NOTE, C_ORN, C_BEND, C_PANIC, C_PATCH, C_LOOP };
 typedef struct {
     uint8_t c, a;
     int16_t b;
@@ -116,6 +119,11 @@ void fm_note(int id, int on, float cents) { post(C_NOTE, id, on, cents); }
 void fm_ornament(int orn, int on) { post(C_ORN, orn, on, 0.0f); }
 void fm_bend(int which, int down, int note_held) { post(C_BEND, which, down | note_held << 1, 0.0f); }
 void fm_panic(void) { post(C_PANIC, 0, 0, 0.0f); }
+enum { LC_REC, LC_PLAY, LC_UNDO, LC_CLEAR };
+void fm_loop_rec(void) { post(C_LOOP, LC_REC, 0, 0.0f); }
+void fm_loop_play(void) { post(C_LOOP, LC_PLAY, 0, 0.0f); }
+void fm_loop_undo(void) { post(C_LOOP, LC_UNDO, 0, 0.0f); }
+void fm_loop_clear(void) { post(C_LOOP, LC_CLEAR, 0, 0.0f); }
 
 /* the patch: the main loop writes the pending record and bumps the generation; the render adopts it */
 static uint8_t patch_pending[FM6_PACKED];
@@ -172,6 +180,10 @@ typedef struct {
 static voice_t vc[FM_NVOICE];
 static uint32_t order_n;
 static int bend_voice = -1;                       /* the voice the bend buttons move: the most recent note */
+static bend_t lp_bend;                            /* the loop's own bend, on its most recent note */
+static int lp_bend_voice = -1;
+#define LP_ID0 256                                /* the loop's notes: voice ids LP_ID0 + key */
+static int lp_key_of(int id) { return id >= LP_ID0 && id < LP_ID0 + FM_NKEY ? id - LP_ID0 : -1; }
 
 static int held[64], nheld;                       /* keys down, in press order (the mono / slide stack) */
 static uint8_t orn[ORN_N];
@@ -239,25 +251,33 @@ float fm_key_cents(int key)                        /* (reads the render's tuning
 static void retune(void)                           /* a tuning change: every key voice's target moves (and glides) */
 {
     int i;
-    for (i = 0; i < FM_NVOICE; i++)
-        if (vc[i].live && vc[i].id >= 0 && vc[i].id < FM_NKEY)
-            vc[i].base = key_cents(vc[i].id, &vc[i].next_up);
+    for (i = 0; i < FM_NVOICE; i++) {
+        int key = lp_key_of(vc[i].id) >= 0 ? lp_key_of(vc[i].id) : vc[i].id;
+        if (vc[i].live && key >= 0 && key < FM_NKEY)
+            vc[i].base = key_cents(key, &vc[i].next_up);
+    }
 }
 
-static void bend_targets(void)
+static void bend_setup(bend_t *b, int voice)
 {
     float up = par[P_BEND_UP] == BEND_T_WHOLE ? 200.0f : 100.0f, t = (float)par[P_BEND_TIME];
-    if (par[P_BEND_UP] == BEND_T_SCALE && bend_voice >= 0)
-        up = vc[bend_voice].next_up;
-    bend_config(&bend, up, -(float)par[P_BEND_DOWN], t, t * 4.0f / 3.0f);
+    if (par[P_BEND_UP] == BEND_T_SCALE && voice >= 0)
+        up = vc[voice].next_up;
+    bend_config(b, up, -(float)par[P_BEND_DOWN], t, t * 4.0f / 3.0f);
+}
+static void bend_targets(void)
+{
+    bend_setup(&bend, bend_voice);
+    bend_setup(&lp_bend, lp_bend_voice);
 }
 
 /* ------------------------------------------------------------- voices --- */
 static void voice_level_for_lights(voice_t *v, float pk)
 {
+    int key = lp_key_of(v->id) >= 0 ? lp_key_of(v->id) : v->id;   /* the loop's notes light their keys too */
     v->lvl = pk > 1.0f ? 1.0f : pk;
-    if (v->id >= 0 && v->id < FM_NKEY)
-        fm_key_level[v->id] = v->lvl;
+    if (key >= 0 && key < FM_NKEY)
+        fm_key_level[key] = v->lvl;
 }
 
 static int find_voice(int id)
@@ -313,7 +333,10 @@ static void pluck(int i, int id, float cents, float next_up, int fresh)
     v->order = ++order_n;
     fm6_note_init(&v->n, patch, mn, vel, fresh);
     fm6_lfo_key(&plfo);
-    bend_voice = i;
+    if (lp_key_of(id) >= 0)
+        lp_bend_voice = i;
+    else
+        bend_voice = i;
     bend_targets();
     if (par[P_MIDI_OUT] && id < FM_NKEY) {
         int m = (int)fm_floorf((cents + 6900.0f) * 0.01f + 0.5f);
@@ -379,7 +402,7 @@ static int legato_voice(void)
     int i, best = -1;
     uint32_t newest = 0;
     for (i = 0; i < FM_NVOICE; i++)
-        if (vc[i].live && vc[i].down && vc[i].order >= newest) {
+        if (vc[i].live && vc[i].down && lp_key_of(vc[i].id) < 0 && vc[i].order >= newest) {
             newest = vc[i].order;
             best = i;
         }
@@ -449,11 +472,285 @@ static void quiet(void)
         vc[i].yo_g = 0.0f;
     }
     nheld = 0;
-    bend_voice = -1;
+    bend_voice = lp_bend_voice = -1;
     bend_init(&bend);
+    bend_init(&lp_bend);
     bend_targets();
     if (par[P_MIDI_OUT])
         fm_midi_out(0xB0, 123, 0);
+}
+
+static void ornament(int o, int on)
+{
+    orn[o] = (uint8_t)(on != 0);
+    if (o == ORN_DAMP && on) {                     /* damp: every note let go fast, whatever 余韻 says */
+        int i;
+        for (i = 0; i < FM_NVOICE; i++)
+            if (vc[i].live) {
+                release(i);
+                vc[i].yo_m = fm_expf(-6.9078f / (0.03f * FM_SR));
+            }
+    }
+}
+
+/* -------------------------------------------------------------- looper --- */
+/* Events are kept in time order, block times from the loop's start. The loop's notes are voices of their own
+ * (ids LP_ID0 + key: lit like the key, retuned like it, no MIDI out), outside the mono / slide stack and the
+ * trill, with a bend of their own; so a loop plays under whatever the hands do. An event recorded while the
+ * loop plays is marked fresh: it sounds live already and is skipped once, then plays from the next pass. A
+ * release is recorded for whatever a layer still has down when it ends, so nothing drones. */
+#define LP_NEV 1024
+#define LP_FRESH 0x80u
+typedef struct {
+    uint32_t t;
+    uint8_t c, a, b, layer;
+} lp_ev_t;
+static lp_ev_t lp_ev[LP_NEV] FM_POOL;
+static uint32_t lp_n, lp_len, lp_pos, lp_next, lp_max, lp_keys_down, lp_other_down;
+static uint8_t lp_state, lp_layer, lp_click_on;
+static float lp_beat, lp_click_at, lp_click_ph, lp_click_inc, lp_click_g;
+volatile uint8_t fm_loop_state, fm_loop_layers;
+volatile uint32_t fm_loop_pos, fm_loop_len, fm_loop_events;
+
+static void lp_release_notes(void)                /* the loop's sounding notes let go (stop, clear, undo) */
+{
+    int i;
+    for (i = 0; i < FM_NVOICE; i++)
+        if (vc[i].live && vc[i].down && lp_key_of(vc[i].id) >= 0)
+            release(i);
+}
+
+static void lp_play_ev(const lp_ev_t *e)
+{
+    switch (e->c & 0x7Fu) {
+    case C_KEY: {
+        int id = LP_ID0 + e->a, i = find_voice(id);
+        if (e->b) {
+            float nu, cents = key_cents(e->a, &nu);
+            if (i >= 0) {
+                pluck(i, id, cents, nu, 0);
+            } else {
+                i = alloc_voice();
+                pluck(i, id, cents, nu, !vc[i].live);
+            }
+        } else if (i >= 0) {
+            release(i);
+        }
+        break;
+    }
+    case C_ORN: ornament(e->a, e->b); break;
+    case C_BEND: bend_button(&lp_bend, e->a, e->b & 1, (e->b >> 1) & 1, ms_count); break;
+    default: break;
+    }
+}
+
+static void lp_insert(uint32_t t, uint32_t c, int a, int b, int fresh)   /* after every event at or before t */
+{
+    uint32_t i, j;
+    if (lp_n >= LP_NEV)
+        return;                                   /* full: the event is lost (a thousand fit) */
+    for (i = lp_n; i > 0 && lp_ev[i - 1].t > t; i--)
+        ;
+    for (j = lp_n; j > i; j--)
+        lp_ev[j] = lp_ev[j - 1];
+    lp_ev[i].t = t;
+    lp_ev[i].c = (uint8_t)(c | (fresh ? LP_FRESH : 0u));
+    lp_ev[i].a = (uint8_t)a;
+    lp_ev[i].b = (uint8_t)b;
+    lp_ev[i].layer = lp_layer;
+    lp_n++;
+    if (i < lp_next)
+        lp_next++;
+}
+
+static void lp_layer_end(uint32_t t, int fresh)   /* releases for whatever the layer still has down */
+{
+    uint32_t k;
+    for (k = 0; k < FM_NKEY; k++)
+        if (lp_keys_down >> k & 1u)
+            lp_insert(t, C_KEY, (int)k, 0, fresh);
+    for (k = 0; k < ORN_N; k++)
+        if (lp_other_down >> k & 1u)
+            lp_insert(t, C_ORN, (int)k, 0, fresh);
+    for (k = 0; k < 2u; k++)
+        if (lp_other_down >> (8u + k) & 1u)
+            lp_insert(t, C_BEND, (int)k, 0, fresh);
+    lp_keys_down = lp_other_down = 0;
+}
+
+static void lp_seek(void)                         /* lp_next for lp_pos: the first event not yet due */
+{
+    for (lp_next = 0; lp_next < lp_n && lp_ev[lp_next].t < lp_pos; lp_next++)
+        ;
+}
+
+static int lp_layer_empty(uint8_t layer)
+{
+    uint32_t k;
+    for (k = 0; k < lp_n; k++)
+        if (lp_ev[k].layer == layer)
+            return 0;
+    return 1;
+}
+
+static void lp_close(void)                        /* the loop is as long as what was played (a beat at least); it plays */
+{
+    uint32_t k, min = (uint32_t)lp_beat;
+    lp_len = lp_pos > min ? lp_pos : min;
+    lp_layer_end(lp_len - 1u, 0);
+    for (k = 0; k < lp_n; k++) {                  /* nothing has played yet: every event is due on the first pass */
+        lp_ev[k].c &= (uint8_t)~LP_FRESH;
+        if (lp_ev[k].t >= lp_len)
+            lp_ev[k].t = lp_len - 1u;
+    }
+    lp_pos = lp_next = 0;
+    lp_click_at = 0.0f;
+    lp_state = LP_PLAY;
+}
+
+static void lp_clear(void)
+{
+    lp_n = lp_len = lp_pos = lp_next = lp_keys_down = lp_other_down = 0;
+    lp_layer = 0;
+    lp_state = LP_IDLE;
+    lp_release_notes();
+    lp_bend_voice = -1;
+    bend_init(&lp_bend);
+}
+
+static void lp_dub_off(void)
+{
+    lp_layer_end(lp_pos, 1);
+    if (lp_layer_empty(lp_layer))
+        lp_layer--;
+    lp_state = LP_PLAY;
+}
+
+static void lp_cmd(int what)
+{
+    switch (what) {
+    case LC_REC:
+        switch (lp_state) {
+        case LP_IDLE: lp_state = LP_ARMED; lp_pos = 0; lp_click_at = 0.0f; break;
+        case LP_ARMED: lp_state = LP_IDLE; break;
+        case LP_REC: lp_close(); break;
+        case LP_PLAY: case LP_STOP:
+            if (lp_layer < 255u)
+                lp_layer++;
+            if (lp_state == LP_STOP) {
+                lp_pos = lp_next = 0;
+                lp_click_at = 0.0f;
+            }
+            lp_state = LP_DUB;
+            break;
+        case LP_DUB: lp_dub_off(); break;
+        default: break;
+        }
+        break;
+    case LC_PLAY:
+        switch (lp_state) {
+        case LP_DUB: lp_dub_off(); /* fall through */
+        case LP_PLAY:
+            lp_state = LP_STOP;
+            lp_release_notes();
+            lp_pos = lp_next = 0;
+            break;
+        case LP_STOP: lp_state = LP_PLAY; lp_pos = lp_next = 0; lp_click_at = 0.0f; break;
+        case LP_REC: lp_close(); break;
+        case LP_ARMED: lp_state = LP_IDLE; break;
+        default: break;
+        }
+        break;
+    case LC_UNDO: {
+        uint32_t k, j = 0;
+        if (lp_layer == 0)
+            break;
+        if (lp_state == LP_DUB)
+            lp_state = LP_PLAY;
+        if (lp_state == LP_REC) {                 /* the first take, undone: back to armed */
+            lp_clear();
+            lp_state = LP_ARMED;
+            lp_pos = 0;
+            break;
+        }
+        for (k = 0; k < lp_n; k++)
+            if (lp_ev[k].layer != lp_layer)
+                lp_ev[j++] = lp_ev[k];
+        lp_n = j;
+        lp_layer--;
+        lp_keys_down = lp_other_down = 0;
+        lp_release_notes();
+        if (lp_layer == 0)
+            lp_clear();
+        else
+            lp_seek();
+        break;
+    }
+    case LC_CLEAR: lp_clear(); break;
+    default: break;
+    }
+}
+
+static void lp_record(uint32_t c, int a, int b)   /* drain: an input while the looper listens */
+{
+    if (lp_state == LP_ARMED) {
+        if (!(c == C_KEY && b))
+            return;
+        lp_pos = lp_next = 0;                     /* the first key is the loop's start */
+        lp_layer = 1;
+        lp_click_at = 0.0f;
+        lp_state = LP_REC;
+    }
+    if (lp_state != LP_REC && lp_state != LP_DUB)
+        return;
+    lp_insert(lp_pos, c, a, b, 1);
+    if (c == C_KEY)
+        lp_keys_down = b ? lp_keys_down | 1u << a : lp_keys_down & ~(1u << a);
+    else if (c == C_ORN)
+        lp_other_down = b ? lp_other_down | 1u << a : lp_other_down & ~(1u << a);
+    else if (c == C_BEND)
+        lp_other_down = (b & 1) ? lp_other_down | 1u << (8 + a) : lp_other_down & ~(1u << (8 + a));
+}
+
+static void lp_ruler(void)                        /* BPM and beats: the auto-close length and the click */
+{
+    lp_beat = 60.0f * FM_SR / ((float)BLK * (float)par[P_LOOP_BPM]);
+    lp_max = (uint32_t)((float)par[P_LOOP_BEATS] * lp_beat);
+    lp_click_on = (uint8_t)(par[P_LOOP_CLICK] != 0);
+}
+
+static void lp_block(void)                        /* every block, before the voices: what is due now */
+{
+    if (lp_state == LP_PLAY || lp_state == LP_DUB) {
+        while (lp_next < lp_n && lp_ev[lp_next].t <= lp_pos) {
+            lp_ev_t *e = &lp_ev[lp_next++];
+            if (e->c & LP_FRESH)
+                e->c &= (uint8_t)~LP_FRESH;       /* recorded just now: it sounds live already */
+            else
+                lp_play_ev(e);
+        }
+        if (++lp_pos >= lp_len) {
+            lp_pos = lp_next = 0;
+            lp_click_at = 0.0f;
+        }
+    } else if (lp_state == LP_REC) {
+        if (++lp_pos >= lp_max)
+            lp_close();
+    } else if (lp_state == LP_ARMED) {
+        lp_pos++;                                 /* counts for the click only */
+    }
+    if (lp_click_on && lp_state != LP_IDLE && lp_state != LP_STOP && (float)lp_pos >= lp_click_at) {
+        int one = lp_click_at == 0.0f;            /* the first beat higher and a little louder */
+        lp_click_g = one ? 0.07f : 0.045f;
+        lp_click_inc = (one ? 2000.0f : 1500.0f) / FM_SR;
+        lp_click_ph = 0.0f;
+        lp_click_at += lp_beat;
+    }
+    fm_loop_state = lp_state;
+    fm_loop_layers = lp_layer;
+    fm_loop_pos = lp_pos;
+    fm_loop_len = lp_len;
+    fm_loop_events = lp_n;
 }
 
 /* ------------------------------------------------------------ settings --- */
@@ -513,8 +810,9 @@ static void apply(int p, int v)
         if (!v)
             fm_midi_out(0xB0, 123, 0);
         break;
+    case P_LOOP_BPM: case P_LOOP_BEATS: case P_LOOP_CLICK: lp_ruler(); break;
     default:
-        if (p >= P_USER0) {
+        if (p >= P_USER0 && p <= P_USER11) {
             tuning_from_params();
             retune();
         }
@@ -544,7 +842,12 @@ void fm_init(void)
     for (i = 0; i < ORN_N; i++)
         orn[i] = 0;
     nheld = 0;
-    bend_voice = -1;
+    bend_voice = lp_bend_voice = -1;
+    bend_init(&lp_bend);
+    lp_n = lp_len = lp_pos = lp_next = lp_keys_down = lp_other_down = 0;
+    lp_state = LP_IDLE;
+    lp_layer = 0;
+    lp_click_g = lp_click_ph = 0.0f;
     ms_count = 0;
     ms_acc = 0.0f;
     vib_ph = vib_cur = 0.0f;
@@ -568,6 +871,7 @@ static void drain(void)
         case C_SET: apply(c.a, c.b); break;
         case C_KEY:
             if (c.a < FM_NKEY) {
+                lp_record(C_KEY, c.a, c.b);
                 if (c.b) {
                     float nu, cents = key_cents(c.a, &nu);
                     note_on(c.a, cents, nu);
@@ -584,21 +888,18 @@ static void drain(void)
             break;
         case C_ORN:
             if (c.a < ORN_N) {
-                orn[c.a] = (uint8_t)(c.b != 0);
-                if (c.a == ORN_DAMP && c.b) {      /* damp: every note let go fast, whatever 余韻 says */
-                    int i;
-                    for (i = 0; i < FM_NVOICE; i++)
-                        if (vc[i].live) {
-                            release(i);
-                            vc[i].yo_m = fm_expf(-6.9078f / (0.03f * FM_SR));
-                        }
-                }
+                lp_record(C_ORN, c.a, c.b);
+                ornament(c.a, c.b);
             }
             break;
         case C_BEND:
-            bend_button(&bend, c.a, c.b & 1, (c.b >> 1) & 1, ms_count);
+            if (c.a < 2u) {
+                lp_record(C_BEND, c.a, c.b);
+                bend_button(&bend, c.a, c.b & 1, (c.b >> 1) & 1, ms_count);
+            }
             break;
         case C_PANIC: quiet(); break;
+        case C_LOOP: lp_cmd(c.a); break;
         case C_PATCH:
             if (patch_seen != patch_gen) {
                 patch_seen = patch_gen;
@@ -615,13 +916,14 @@ static void drain(void)
 static void controls_block(void)
 {
     int i, vib_on = par[P_VIB_ON] || orn[ORN_VIB], trill_on = par[P_TRILL_ON] || orn[ORN_TRILL];
-    float b;
+    float b, lb;
     ms_acc += BLK_MS;
     while (ms_acc >= 1.0f) {
         ms_acc -= 1.0f;
         ms_count++;
     }
     b = bend_value(&bend, ms_count);
+    lb = bend_value(&lp_bend, ms_count);
     fm_bend_cents = b;
     /* vibrato: a sine, its depth easing in and out over about 100 ms */
     vib_ph += vib_inc;
@@ -646,7 +948,7 @@ static void controls_block(void)
         voice_t *v = &vc[i];
         if (!v->live)
             continue;
-        smooth_set(&v->pitch, v->base + (i == bend_voice ? b : 0.0f));
+        smooth_set(&v->pitch, v->base + (i == bend_voice ? b : 0.0f) + (i == lp_bend_voice ? lb : 0.0f));
     }
 }
 
@@ -674,6 +976,8 @@ static void render_voices(void)
                 voice_level_for_lights(v, 0.0f);
                 if (bend_voice == i)
                     bend_voice = -1;
+                if (lp_bend_voice == i)
+                    lp_bend_voice = -1;
                 continue;
             }
             v->g = 0.0f;
@@ -724,6 +1028,7 @@ static void render_block(int32_t *out, float gain)
 #endif
     for (k = 0; k < BLK; k++)
         mix[k] = 0.0f;
+    lp_block();
     controls_block();
     render_voices();
     level_cur = lv1;
@@ -740,6 +1045,14 @@ static void render_block(int32_t *out, float gain)
             m = m + char_amt * (fm_tanhf(1.6f * m) * 0.625f - m);
         }
         reverb(m * rev_send * 0.5f, &wl, &wr);
+        if (lp_click_g > 1e-4f) {                  /* the looper's click: a short sine, dry, quiet */
+            float c = lp_click_g * fm_sin_turns(lp_click_ph);
+            lp_click_ph += lp_click_inc;
+            if (lp_click_ph >= 1.0f)
+                lp_click_ph -= 1.0f;
+            lp_click_g *= 0.985f;
+            m += c;
+        }
         lv += dlv;
         l = (m + wl) * lv * gain * OUT_TRIM;
         r = (m + wr) * lv * gain * OUT_TRIM;

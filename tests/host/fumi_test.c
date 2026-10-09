@@ -52,6 +52,16 @@ static int koto_a(void)                           /* the slot of FuMi's own KOTO
     int i = slot_of("Koto Pluck");
     return i < 0 ? 0 : i;
 }
+static float ref[3 * 44100];                      /* a pass of the loop, kept */
+static float pass_diff(uint32_t n)                /* the largest difference between buf and ref over n samples */
+{
+    float d = 0;
+    uint32_t k;
+    for (k = 0; k < n; k++)
+        if (fabsf(buf[k] - ref[k]) > d)
+            d = fabsf(buf[k] - ref[k]);
+    return d;
+}
 static int ms_to_db_below(int from, float pk, double d)   /* the first ms after `from` at which the 5 ms peak stays d dB under pk */
 {
     int i;
@@ -445,6 +455,118 @@ int main(void)
         CHECK_NEAR("Mokugyo: the octave above on the next mi", tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 440.0), 0.0, 15.0);
         fm_key(10, 0);
         run(0, 44032);
+    }
+    /* the looper (1.0.4): REC arms, the first key starts the loop, REC closes it and it plays, REC overdubs,
+     * PLAY stops and starts, undo takes the last layer, clear empties it. The Mokugyo (ends by itself, key-synced
+     * oscillators, no LFO) with no 余韻 and no reverb: a pass of the loop is the same audio every time */
+    {
+        uint32_t L, P;
+        float pre, post;
+        fm_init();
+        fm_set(P_VOICE, slot_of("Mokugyo"));
+        fm_set(P_REVERB, 0);
+        fm_set(P_YOIN, 0);
+        fm_set(P_LEVEL, 60);
+        fm_set(P_LOOP_BPM, 120);
+        fm_set(P_LOOP_BEATS, 8);
+        run(0, 256);
+        CHECK("looper: idle at boot", fm_loop_state == LP_IDLE && fm_loop_len == 0);
+        fm_loop_rec();
+        run(0, 256);
+        CHECK("REC tap: armed", fm_loop_state == LP_ARMED);
+        run(0, 44032);                            /* a second of waiting: nothing starts */
+        CHECK("armed: the loop has not started", fm_loop_state == LP_ARMED);
+        fm_key(5, 1);
+        run(0, 256);
+        CHECK("the first key starts the recording", fm_loop_state == LP_REC && fm_loop_pos <= 8u);
+        run(0, 256 * 20);
+        fm_key(5, 0);
+        run(0, 256 * (150 - 21));                 /* 150 renders = 1200 blocks from the key */
+        fm_loop_rec();
+        run(0, 256);
+        CHECK("REC again closes the loop and plays it", fm_loop_state == LP_PLAY);
+        L = fm_loop_len;
+        CHECK_NEAR("the loop is as long as what was played (blocks of 32)", (double)L, 1200.0, 8.0);
+        CHECK("one layer, two events", fm_loop_layers == 1 && fm_loop_events == 2);
+        P = L * 32u;
+        run(0, (int)P - 256);                     /* the rest of the first pass: at the loop's start again */
+        run(0, (int)P);                           /* a full pass, kept as the reference */
+        memcpy(ref, buf, P * sizeof buf[0]);
+        run(0, (int)P);                           /* the next pass */
+        CHECK("a pass is the same as the last, sample for sample", pass_diff(P) < 1e-5f && peak_of(0, (int)P) > 0.003f);
+        CHECK_NEAR("the loop's note is the key's pitch (三 = A3)", tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 220.0), 0.0, 15.0);
+        fm_set(P_HON, 6);                         /* the loop stores keys: 本数 up two retunes it */
+        run(0, (int)P);
+        run(0, (int)P);
+        CHECK_NEAR("本数 up two: the loop follows (+200 cents)", tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 220.0), 200.0, 15.0);
+        fm_set(P_HON, 4);
+        run(0, (int)P);
+        /* overdub: a second note on a new layer, half way round; undo takes it away again. The windows compared
+         * start at the loop's start every time (the counts of 256-frame renders keep the phase) */
+        fm_loop_rec();
+        run(0, 256);
+        CHECK("REC while playing: overdub", fm_loop_state == LP_DUB);
+        run(0, (int)P / 2);
+        fm_key(8, 1);
+        run(0, 256 * 10);
+        fm_key(8, 0);
+        run(0, 256);
+        fm_loop_rec();
+        run(0, 256);
+        CHECK("REC again: overdub off, two layers, four events", fm_loop_state == LP_PLAY && fm_loop_layers == 2 && fm_loop_events == 4);
+        run(0, (int)P - 256 - (int)P / 2 - 256 * 12);   /* the rest of this pass */
+        run(0, (int)P);
+        CHECK("the pass has the second note in it", pass_diff(P) > 0.003f);
+        fm_loop_undo();
+        run(0, (int)P);                           /* the pass after the undo: the removed layer's tails go */
+        run(0, (int)P);
+        printf("  undo: layers %d, events %u, difference from the first pass %.2e\n", fm_loop_layers, fm_loop_events, (double)pass_diff(P));
+        CHECK("undo: one layer, two events, the first pass again", fm_loop_layers == 1 && fm_loop_events == 2 && pass_diff(P) < 1e-5f);
+        /* PLAY stops (the notes let go) and starts from the top */
+        fm_loop_play();
+        run(0, 256);
+        CHECK("PLAY: stopped", fm_loop_state == LP_STOP);
+        run(0, 44032);
+        CHECK("stopped: nothing sounds", fm_nvoices == 0 && fm_loop_pos == 0u);
+        fm_loop_play();
+        run(0, 256);
+        CHECK("PLAY again: playing from the top", fm_loop_state == LP_PLAY && fm_loop_pos <= 8u && fm_nvoices == 1);
+        fm_loop_clear();
+        run(0, 256);
+        CHECK("clear: idle, empty", fm_loop_state == LP_IDLE && fm_loop_events == 0 && fm_loop_len == 0 && fm_loop_layers == 0);
+        /* the seam: a note held across the loop point rings over the join (余韻 80) */
+        fm_set(P_YOIN, 80);
+        fm_set(P_VOICE, slot_of("Koto"));
+        fm_loop_rec();
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 44032);
+        fm_loop_rec();                            /* closed with the key still down */
+        run(0, 256);
+        fm_key(5, 0);
+        L = fm_loop_len;
+        P = L * 32u;
+        run(0, (int)P - 256 - 4410);              /* to 100 ms before the join */
+        pre = run(0, 4410);                       /* the 100 ms before */
+        post = run(0, 4410);                      /* the 100 ms after */
+        printf("  seam: %.1f dB before the join, %.1f dB after, %d voices\n", db(pre), db(post), fm_nvoices);
+        CHECK("the tail rings over the join (not cut, not choked)", db(post) > db(pre) - 6.0 && fm_nvoices >= 2);
+        fm_loop_clear();
+        run(0, 256);
+        /* the length by the ruler: 8 beats at 120 BPM close the loop by themselves after 4 s */
+        fm_set(P_YOIN, 0);
+        fm_set(P_VOICE, slot_of("Mokugyo"));
+        fm_loop_rec();
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 256);
+        fm_key(5, 0);
+        run(0, 44100 * 2);
+        CHECK("still recording at 2 s", fm_loop_state == LP_REC);
+        run(0, 44100 * 2 + 1024);
+        CHECK("8 beats at 120 BPM: closed by itself at 4 s and playing", fm_loop_state == LP_PLAY && fm_loop_len == 5512u);
+        fm_loop_clear();
+        run(0, 256);
     }
     /* cost and headroom: the six-operator koto, eight voices held, reverb; the pre-clip peak (fm_peak) stays
      * inside what the soft clip handles gracefully. The device figure comes from plat_cpu_pct() at M4 */
