@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* OMNI on the host: the whole app (UI, project, engine) against a simulated FM-1 driven by a script.
+/* FuMi-1 on the host: the whole app (UI, project, engine) against a simulated FM-1 driven by a script.
  * Audio goes to a WAV, the screen to PNGs, the lights to text, MIDI out to a log. The device-only
- * parts (HAL, USB, OTA, flash driver) are replaced by plat.h implemented here. (From X0X's x0x_host.)
+ * parts (HAL, USB, OTA, flash driver) are replaced by plat.h implemented here. (FoMni's, from X0X's.)
  *
- *   omni_host SCRIPT [OUTDIR]
+ *   fumi_host SCRIPT [OUTDIR]
  *
  * Script, one command per line (# comments):
  *   wait MS                      run the device for MS milliseconds
@@ -19,9 +19,12 @@
  *   shot FILE.png                save the screen
  *   leds                         print the lit buttons and keys
  *   expect WHAT VALUE            check state: exit 1 on mismatch; VALUE "<N" / ">N" is a bound
+ *     WHAT: view parN (fumi.h P_*) dirty store_writes midi_out nvoices bend10 (cents x 10) keylevelK (x 100)
+ *           custom peak_db_max peak_db_min
  *   reboot                       re-run boot from the simulated flash (persistence test)
  */
 #define OM_HOST 1
+#define FM_HOST 1
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -102,7 +105,7 @@ void plat_midi_out(uint32_t pkt)
         fprintf(midi_log, "%u ms: %02X %02X %02X\n", now_ms, (pkt >> 8) & 0xFF, (pkt >> 16) & 0xFF, (pkt >> 24) & 0xFF);
 }
 /* the engine's MIDI out, as the device's glue sends it (USB-MIDI packet, cable 0) */
-void om_midi_out(uint32_t st, uint32_t d1, uint32_t d2) { plat_midi_out(st >> 4 | st << 8 | d1 << 16 | d2 << 24); }
+void fm_midi_out(uint32_t st, uint32_t d1, uint32_t d2) { plat_midi_out(st >> 4 | st << 8 | d1 << 16 | d2 << 24); }
 
 /* flash: one buffer per object, kept across a simulated reboot */
 static uint8_t store[OBJ_NOBJ][PLAT_STORE_MAX];
@@ -270,7 +273,7 @@ static double now_ns(void)
 
 static void boot(void)
 {
-    om_init();
+    fm_init();
     project_load();
     project_apply();
     lcd_fill(0, 0, 240, 240, 0);
@@ -285,7 +288,7 @@ static void run_ms(uint32_t ms)
         now_ms++;
         while (audio_due_ms <= (double)now_ms) {      /* 256-frame blocks, as the device renders them */
             double t0 = now_ns(), dt;
-            om_render(blk, 256, master);
+            fm_render(blk, 256, master);
 #ifdef OM_WEB
             web_audio(blk, 256);
 #endif
@@ -344,48 +347,24 @@ static int key_of(const char *s)
 static int expect(const char *what, const char *val)
 {
     int got;
-    if (!strcmp(what, "playing"))
-        got = om_playing;
-    else if (!strcmp(what, "view"))
+    if (!strcmp(what, "view"))
         got = ui.view;
-    else if (!strcmp(what, "root"))
-        got = ui.root;
-    else if (!strcmp(what, "type"))
-        got = ui.type;
-    else if (!strcmp(what, "pad"))
-        got = ui.pad;
-    else if (!strcmp(what, "hold"))
-        got = proj.hold;
-    else if (!strcmp(what, "sync"))
-        got = proj.sync;
-    else if (!strcmp(what, "armed"))
-        got = ui.armed;
     else if (!strcmp(what, "dirty"))
         got = ui.dirty;
     else if (!strcmp(what, "store_writes"))
         got = (int)store_writes;
-    else if (!strcmp(what, "clocks_out"))
-        got = (int)clock_out_count;
-    else if (!strcmp(what, "step"))
-        got = om_step;
-    else if (!strcmp(what, "ext"))
-        got = om_ext;
     else if (!strcmp(what, "midi_out"))
         got = (int)midi_out_count;
-    else if (!strcmp(what, "chord_level"))
-        got = (int)(om_chord_level * 100.0f);
-    else if (!strcmp(what, "bass_level"))
-        got = (int)(om_bass_level * 100.0f);
-    else if (!strncmp(what, "par", 3))            /* parN: parameter N (omni.h P_*) */
+    else if (!strcmp(what, "nvoices"))
+        got = fm_nvoices;
+    else if (!strcmp(what, "custom"))
+        got = fm_patch_custom;
+    else if (!strcmp(what, "bend10"))
+        got = (int)(fm_bend_cents * 10.0f);
+    else if (!strncmp(what, "par", 3))            /* parN: parameter N (fumi.h P_*) */
         got = proj.par[atoi(what + 3)];
-    else if (!strncmp(what, "padroot", 7))
-        got = proj.pad_root[atoi(what + 7)];
-    else if (!strncmp(what, "padtype", 7))
-        got = proj.pad_type[atoi(what + 7)];
-    else if (!strncmp(what, "strnote", 7))         /* strnoteS: string S's note */
-        got = om_str_note[atoi(what + 7)];
-    else if (!strncmp(what, "strlevel", 8))        /* strlevelS: string S's envelope x 100 */
-        got = (int)(om_str_level[atoi(what + 8)] * 100.0f);
+    else if (!strncmp(what, "keylevel", 8))        /* keylevelK: key K's level x 100 */
+        got = (int)(fm_key_level[atoi(what + 8)] * 100.0f);
     else if (!strcmp(what, "peak_db_max") || !strcmp(what, "peak_db_min")) {
         double db = 20.0 * log10(peak_out > 1e-9f ? peak_out : 1e-9f);
         int bad = what[8] == 'm' && what[9] == 'a' ? db > atof(val) : db < atof(val);
@@ -420,7 +399,7 @@ int main(int argc, char **argv)
     const char *dir = argc > 2 ? argv[2] : ".";
     int lineno = 0, fails = 0;
     if (argc < 2) {
-        fprintf(stderr, "usage: omni_host SCRIPT [OUTDIR]\n");
+        fprintf(stderr, "usage: fumi_host SCRIPT [OUTDIR]\n");
         return 2;
     }
     sc = fopen(argv[1], "r");

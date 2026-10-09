@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* OMNI platform on the FM-1: plat.h over Felucca's HAL, panel map, USB rings and storage.
+/* FuMi-1 platform on the FM-1 (FoMni's): plat.h over Felucca's HAL, panel map, USB rings and storage.
  * Part of the unity build (omni.c), after the HAL, usb.c, storage.c and panel.c. */
 
 uint32_t plat_ms(void) { return fm1_ms; }
@@ -82,7 +82,7 @@ int plat_midi_in(uint32_t *pkt)
 }
 void plat_midi_out(uint32_t pkt) { midi_out_event(pkt); }
 /* the engine's MIDI out (from the render): a USB-MIDI packet, cable 0, CIN = the status's high nibble */
-void om_midi_out(uint32_t st, uint32_t d1, uint32_t d2) { plat_midi_out(st >> 4 | st << 8 | d1 << 16 | d2 << 24); }
+void fm_midi_out(uint32_t st, uint32_t d1, uint32_t d2) { plat_midi_out(st >> 4 | st << 8 | d1 << 16 | d2 << 24); }
 
 int plat_store_load(uint32_t obj, void *dst, uint32_t max) { return flash_ok ? st_load(obj, dst, max) : -1; }
 int plat_store_save(uint32_t obj, const void *src, uint32_t len) { return flash_ok ? st_save(obj, src, len) : -9; }

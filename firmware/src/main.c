@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* OMNI firmware for the M-VAVE FM-1: one compilation unit for the platform and the app
+/* FuMi-1 firmware for the M-VAVE FM-1: one compilation unit for the platform and the app
  * (Felucca's layout, as X0X: the HAL is header-only, so everything that touches it is here).
- * The instrument (dsp/omni.c) is a separate unit compiled at -O2 by tools/build.py; this one is
+ * The instrument (dsp/fumi.c) is a separate unit compiled at -O2 by tools/build.py; this one is
  * -Os. Order matters. */
 #include <stdint.h>
 #include "fm1_time.h"
@@ -37,7 +37,7 @@ static inline int32_t clamp(int32_t v, int32_t lo, int32_t hi) { return v < lo ?
 #endif
 #define FELUCCA_UAC OM_UAC
 #ifndef FELUCCA_ID
-#define FELUCCA_ID "FM-1_800"     /* package identity (tools/build.py) */
+#define FELUCCA_ID "FM-1_700"     /* package identity (tools/build.py); FuMi-1 uses 7xx */
 #endif
 #include "usb.c"
 #ifndef OM_TRS

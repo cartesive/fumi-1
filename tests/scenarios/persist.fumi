@@ -1,0 +1,25 @@
+# the setup survives a save and a reboot; a bad object gives the defaults
+spin SELECT 2
+spin K1 -20
+tap LFO
+wait 50
+expect par0 6
+expect par8 40
+expect par10 1
+expect dirty 1
+tap SAVE
+wait 50
+expect dirty 0
+expect store_writes 1
+reboot
+wait 100
+expect par0 6
+expect par8 40
+expect par10 1
+# autosave: a change, then quiet for a while
+spin SELECT -1
+wait 50
+expect dirty 1
+wait 4500
+expect dirty 0
+expect store_writes 2

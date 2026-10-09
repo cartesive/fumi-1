@@ -1,0 +1,83 @@
+# a first look and listen: the scale up the white keys, 本数 and the tuning switch, a bend, the pages
+wav first.wav
+wait 300
+shot home.png
+expect view 0
+expect par0 4
+strum 0 15 60
+wait 100
+expect nvoices >0
+shot scale.png
+wait 1500
+key w5 down
+wait 300
+expect keylevel5 >5
+tap SEL
+wait 50
+expect par2 0
+tap SEL
+wait 50
+expect par2 1
+press OCT+
+wait 200
+expect bend10 >950
+release OCT+
+wait 300
+expect bend10 <5
+key w5 up
+wait 600
+expect par6 0
+press OCT+
+release OCT+
+wait 50
+expect par6 1
+press OCT-
+release OCT-
+wait 50
+expect par6 0
+spin SELECT 3
+wait 50
+expect par0 7
+spin ALGO 1
+wait 50
+expect par7 1
+tap LFO
+wait 50
+expect par10 1
+tap ARP
+tap GLO
+tap SEQ
+wait 50
+expect par13 1
+expect par16 1
+expect par17 1
+leds
+shot toggles.png
+key b0 down
+wait 200
+key b0 up
+tap LFO
+tap ARP
+tap GLO
+tap SEQ
+wait 1500
+wavstop
+expect peak_db_max -0.1
+expect peak_db_min -30
+tap FX
+wait 50
+shot sound.png
+expect view 1
+tap EDIT
+wait 50
+shot bend.png
+expect view 2
+press SEL
+wait 500
+release SEL
+wait 50
+expect view 3
+expect par2 1
+shot tuning.png
+tap HOME
+expect view 0

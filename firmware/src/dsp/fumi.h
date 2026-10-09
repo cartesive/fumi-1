@@ -58,6 +58,8 @@ void fm_patch_set(const uint8_t *packed128);     /* the current patch (a DX7-for
 void fm_patch_get(uint8_t *packed128);           /* main loop: the patch the render uses */
 int fm_patch_count(void);                        /* FuMi's own patches (P_VOICE) */
 const char *fm_patch_name(int i);
+const uint8_t *fm_patch_builtin(int i);          /* its packed record */
+float fm_key_cents(int key);                     /* main loop: the pitch a panel key plays now, cents from A4 */
 
 /* the render (audio ISR): n stereo frames (a multiple of 32), 24-bit in int32; gain Q12 (MASTER) */
 void fm_render(int32_t *out_lr, uint32_t n, uint32_t gain_q12);

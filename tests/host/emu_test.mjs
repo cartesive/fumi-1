@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// The browser build in Node: boot it, strum across the white keys, expect sound and screen frames.
+// The browser build in Node: boot it, play up the white keys, expect sound and screen frames.
 import fs from "fs";
 const wasm = fs.readFileSync(process.argv[2]);
 let mem;

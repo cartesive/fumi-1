@@ -1,15 +1,16 @@
 /* SPDX-License-Identifier: GPL-3.0-only */
-/* OMNI in the browser: the host simulator (host/omni_host.c: the whole app, UI and instrument,
- * against a simulated FM-1) compiled to WebAssembly and run in an AudioWorklet (from X0X's). The worklet asks
+/* FuMi-1 in the browser: the host simulator (host/fumi_host.c: the whole app, UI and instrument,
+ * against a simulated FM-1) compiled to WebAssembly and run in an AudioWorklet (FoMni's, from X0X's).
+ * The audition bench (web/bench) uses the same build through the bench exports at the end. The worklet asks
  * for audio; producing it advances the device's clock one millisecond at a time, which runs the
  * engine every 256 samples (the I2S half buffer) and the UI every 16 ms, as on the FM-1. The page
  * sends input, and reads the screen, the lights and the saved objects back through these exports.
  *
- *   web/emu/build.sh   ->  build/emu/omni.wasm (+ the page) */
+ *   web/emu/build.sh   ->  build/emu/fumi.wasm (+ the page) */
 #include <stdint.h>
 
 static void web_audio(const int32_t *blk, uint32_t n);
-#include "../../host/omni_host.c"
+#include "../../host/fumi_host.c"
 
 #undef __attribute__
 
@@ -73,3 +74,28 @@ __attribute__((used, visibility("default"))) void web_store_set_len(uint32_t obj
 __attribute__((used, visibility("default"))) uint32_t web_store_writes(void) { return store_writes; }
 __attribute__((used, visibility("default"))) uint32_t web_nobj(void) { return OBJ_NOBJ; }
 __attribute__((used, visibility("default"))) uint32_t web_store_max(void) { return PLAT_STORE_MAX; }
+
+/* ---- the audition bench (web/bench): patches, parameters and notes straight into the engine */
+static uint8_t web_patch_buf[128];
+__attribute__((used, visibility("default"))) uint8_t *web_patch(void) { return web_patch_buf; }
+__attribute__((used, visibility("default"))) void web_patch_set(void) { fm_patch_set(web_patch_buf); }
+__attribute__((used, visibility("default"))) void web_patch_get(void) { fm_patch_get(web_patch_buf); }
+__attribute__((used, visibility("default"))) void web_param(int p, int v) { if (p >= 0 && p < P_NPARAMS) knob_set(p, v); }
+__attribute__((used, visibility("default"))) int web_param_get(int p) { return p >= 0 && p < P_NPARAMS ? proj.par[p] : 0; }
+__attribute__((used, visibility("default"))) int web_param_lo(int p) { return fm_param_info(p)->lo; }
+__attribute__((used, visibility("default"))) int web_param_hi(int p) { return fm_param_info(p)->hi; }
+__attribute__((used, visibility("default"))) const char *web_param_name(int p) { return fm_param_info(p)->name; }
+__attribute__((used, visibility("default"))) void web_note(int id, int on, float cents) { fm_note(FM_NOTE_ID + id, on, cents); }
+__attribute__((used, visibility("default"))) void web_key(int key, int on) { fm_key(key, on); }
+__attribute__((used, visibility("default"))) void web_ornament(int o, int on) { fm_ornament(o, on); }
+__attribute__((used, visibility("default"))) void web_bend(int which, int down, int held) { fm_bend(which, down, held); }
+__attribute__((used, visibility("default"))) void web_panic(void) { fm_panic(); }
+__attribute__((used, visibility("default"))) float web_peak(void) { return fm_peak; }
+__attribute__((used, visibility("default"))) int web_nvoices(void) { return fm_nvoices; }
+__attribute__((used, visibility("default"))) const volatile char *web_label(void) { return fm_patch_label; }
+__attribute__((used, visibility("default"))) int web_custom(void) { return fm_patch_custom; }
+__attribute__((used, visibility("default"))) float web_key_cents(int k) { return fm_key_cents(k); }
+__attribute__((used, visibility("default"))) int web_npatch(void) { return fm_patch_count(); }
+__attribute__((used, visibility("default"))) const uint8_t *web_builtin(int i) { return fm_patch_builtin(i); }
+__attribute__((used, visibility("default"))) float web_key_level(int k) { return k >= 0 && k < FM_NKEY ? fm_key_level[k] : 0.0f; }
+__attribute__((used, visibility("default"))) float web_bend_cents(void) { return fm_bend_cents; }

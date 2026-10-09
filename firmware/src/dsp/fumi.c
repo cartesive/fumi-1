@@ -138,6 +138,7 @@ void fm_patch_get(uint8_t *pk)
 }
 int fm_patch_count(void) { return FM_NPATCH; }
 const char *fm_patch_name(int i) { return FM_PATCH_NAME[(i < 0 || i >= FM_NPATCH) ? 0 : i]; }
+const uint8_t *fm_patch_builtin(int i) { return FM_PATCH[(i < 0 || i >= FM_NPATCH) ? 0 : i]; }
 
 /* --------------------------------------------------------------- state --- */
 volatile float fm_key_level[FM_NKEY];
@@ -221,6 +222,12 @@ static float key_cents(int id, float *next_up)
     }
     *next_up = 100.0f;
     return 0.0f;
+}
+
+float fm_key_cents(int key)                        /* (reads the render's tuning: a glance, not a contract) */
+{
+    float nu;
+    return key_cents(key, &nu);
 }
 
 static void retune(void)                           /* a tuning change: every key voice's target moves (and glides) */
