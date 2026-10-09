@@ -1,16 +1,17 @@
-# Building FoMni
+# Building FuMi-1
 
 The build makes three files in `build/`:
 
 | File | What |
 | --- | --- |
-| `omni.bin` | the firmware app |
+| `fumi.bin` | the firmware app |
 | `loader/ota.bin` | the update loader |
-| `omni.fwsc` | the installable package (app + loader) |
+| `fumi.fwsc` | the installable package (app + loader) |
 
 ## Prerequisites (macOS)
 
-- Python 3 with Pillow: `pip3 install Pillow`
+- Python 3.10+ with Pillow (with raqm), numpy and scipy. On macOS the system Python's Pillow lacks raqm;
+  use a venv from Homebrew's Python (`docs/dev-environment.md`) and put its `bin` first on `PATH`
 - Docker Desktop. The JieLi toolchain is Linux x86-64 only; the build runs each tool in a
   `linux/amd64` `debian:bookworm-slim` container (Rosetta on Apple silicon). Keep the source
   tree in a folder Docker can share, e.g. under `/Users`.
@@ -29,6 +30,8 @@ The build makes three files in `build/`:
   ```
 
 - Node.js (optional, for the web tests).
+- Emscripten (optional: the browser emulator and the audition bench). The official emsdk works; it needs
+  Python 3.10+ on PATH.
 
 On Linux x86-64 the toolchain runs natively and Docker is not needed.
 
@@ -41,7 +44,8 @@ On Linux x86-64 the toolchain runs natively and Docker is not needed.
 `JIELI_TOOLCHAIN` and `AC79_SDK` override the default locations
 (`~/.jieli/toolchain`, `~/fw-AC79_AIoT_SDK`).
 
-`./build.sh --release 0.1` makes a release build; the package is `build/omni-0.1.fwsc`.
+`./build.sh --release 0.1` makes a release build; the package is `build/fumi-0.1.fwsc` (identity
+`FM-1_7000100`; dev builds are `FM-1_700`).
 
 On macOS with podman instead of Docker, put a `docker` script that runs `exec podman "$@"` first
 on your PATH. `OM_JOBS` (default 4) limits parallel compiles: a podman machine drops
@@ -59,20 +63,22 @@ The build also generates `build/gen/` (the font). It fails if a soft-double rout
 tests/run_tests.sh
 ```
 
-Runs, on the build machine: the maths library against libm; the instrument (`tests/host/omni_test.c`:
-the strum plate's voicing against the OM-108 manual, envelopes, rhythm timing, levels); flash
-storage; Felucca's update-path tests against `build/omni.fwsc`; and the whole app in the simulator
-(`tests/scenarios/*.omni`), with its screenshots and audio in `build/scenarios/`.
+Runs, on the build machine: the platform guard (`tools/guard_platform.sh`); the maths library against
+libm; the pitch core (`tuning`, `smooth`, `bend`); the FM6 core; the instrument; the click regression test
+and the proof that it fails without smoothing; the no-double check; flash storage; Felucca's update-path
+tests against `build/fumi.fwsc`; the whole app in the simulator (`tests/scenarios/*.fumi`, with screenshots
+and audio in `build/scenarios/`); the browser build and the bench exports in Node; and the Python tools'
+self-tests.
 
-`host/build_host.sh` builds the simulator alone; `build/host/omni_host SCRIPT OUTDIR` runs one
-script (the command list is at the top of `host/omni_host.c`).
+`host/build_host.sh` builds the simulator alone; `build/host/fumi_host SCRIPT OUTDIR` runs one
+script (the command list is at the top of `host/fumi_host.c`).
 
 ## Install
 
 From the command line (needs `pip3 install mido python-rtmidi`):
 
 ```
-python3 tools/fm1_install.py build/omni.fwsc
+python3 tools/fm1_install.py build/fumi.fwsc
 python3 tools/fm1_install.py --info          # identity of the connected FM-1
 ```
 
@@ -83,8 +89,9 @@ mode. If the FM-1 no longer starts but reaches the chip's update mode (4C4A:8057
 
 ## Publishing a release
 
-1. `./build.sh --release X.Y` (the identity, FM-1_8XXYYZZ, is what the installer checks).
+1. `./build.sh --release X.Y` (the identity, FM-1_7XXYYZZ, is what the installer checks; confirm 7xx is
+   still free against awesome-fm-1 and the FM-1 Firmware Hub first).
 2. `tools/publish_pages.sh X.Y`: builds the site (landing page, browser emulator, web installer,
-   firmware) with `tools/make_pages.py` and pushes it to the `gh-pages` branch, which GitHub Pages
-   serves at <https://charlesvestal.github.io/fm1-fomni/>.
-3. `gh release create vX.Y build/omni-X.Y.fwsc` for the command-line download.
+   firmware) with `tools/make_pages.py` and pushes it to the `gh-pages` branch (M7: the pages still carry
+   FoMni's text and need rebranding before a first publish).
+3. `gh release create vX.Y build/fumi-X.Y.fwsc` for the command-line download.

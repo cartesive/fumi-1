@@ -5,3 +5,4 @@ refs/*
 __pycache__/
 .DS_Store
 .superpowers/
+# bench/sessions/*.json are kept: they are the voicing record for the next round
