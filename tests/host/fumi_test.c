@@ -39,7 +39,9 @@ static float peak_of(int from, int to)
     return pk;
 }
 static double db(float x) { return 20.0 * log10(x > 1e-9f ? (double)x : 1e-9); }
-static int onsets(int from, int to)               /* rises of 6 dB within 10 ms of the 5 ms RMS envelope */
+static int onsets(int from, int to)               /* rises of 4 dB within 10 ms of the 5 ms RMS envelope: a koto
+                                                   * decaying at the ST-50's -28 dB/s drops only 5-6 dB between
+                                                   * re-plucks at the middle trill rate */
 {
     int i, n = 0, w = 220, last = -100000;
     for (i = from + 2 * w; i < to; i += 44) {
@@ -49,7 +51,7 @@ static int onsets(int from, int to)               /* rises of 6 dB within 10 ms 
             a += (double)buf[i - 2 * w + k] * buf[i - 2 * w + k];
             b += (double)buf[i - w + k] * buf[i - w + k];
         }
-        if (b > 4.0 * a && b > 1e-6 && i - last > 2000) {
+        if (b > 2.5 * a && b > 1e-6 && i - last > 2000) {
             n++;
             last = i;
         }

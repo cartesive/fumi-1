@@ -33,6 +33,7 @@ for t in tuning smooth bend fm6 fumi click; do
 done
 # the click test must fail with the smoothing bypassed, or it tests nothing
 run click-proof sh -c "$CC $DSP -DFM_NO_SMOOTH -o $OUT/click_nosmooth tests/host/click_test.c -lm && ! $OUT/click_nosmooth"
+run koto-search sh -c "$CC -O2 -std=gnu99 -Wno-unused-function -Ifirmware/src/dsp -o $OUT/koto_search tools/koto_search.c -lm && $OUT/koto_search 1 20 >/dev/null"
 # no double anywhere in the firmware's own code (the FPU is single precision)
 run no-double sh -c "$CC -fsyntax-only -std=c99 -Wall -Wextra -Wdouble-promotion -Werror -Wno-unused-function -DFM_HOST -Ifirmware/src/dsp firmware/src/dsp/fumi.c && $PY tools/check_no_double.py firmware/src/dsp/*.c firmware/src/dsp/*.h firmware/src/app/*.c firmware/src/app/*.h"
 run tables sh -c "$PY tools/gen_fm6_tables.py $OUT/fm6_tables.h >/dev/null && cmp $OUT/fm6_tables.h firmware/src/dsp/fm6_tables.h && $PY tools/fumi_patches.py $OUT/fumi_patches.h >/dev/null && cmp $OUT/fumi_patches.h firmware/src/dsp/fumi_patches.h"

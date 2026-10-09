@@ -55,33 +55,37 @@ def pack(v):
     return b
 
 
-# Stack A: OP1 carrier (fast, the click's body) <- OP2 (a high ratio, gone in a few ms).
-# Stack B: OP3 carrier (the body: loud 150 ms, then a long quieter tail) <- OP4 (rounds the first partials).
-# Stack C: OP5 carrier an octave below, quiet <- OP6 (feedback, a little grain).
+# Stack A: OP1 carrier <- OP2 at ratio 2 or 3: the odd partials and the twang (its index falls over the
+# first 200 ms, bright to dark). Stack B: OP3 carrier <- OP4 at ratio 1: the body, partials 1 to 4.
+# Stack C: OP5 carrier, detuned a little, <- OP6 with feedback: fullness and grain.
+# KOTO A and B were found by a search over the engine against the ST-50 measurements of docs/research/13
+# (section 4, A4: partials at onset 0, 0, -2, -9, -6 dB, at 300 ms 0, -6, -2, -2 with the 5th up below -20;
+# click 7-9 dB above 5 kHz in the first 12 ms; -28 dB/s for 200 ms then -16; peak within 5 ms). WARM is A
+# with the modulators turned down and the third stack up. Measured again through the host in tests.
 PATCHES = [
     ("KOTO A", voice("KOTO A", 5, [
-        op(r=(99, 85, 60, 70), l=(99, 70, 0, 0), ol=78, rs=3, rd=25, rc=0),
-        op(r=(99, 92, 50, 80), l=(99, 0, 0, 0), ol=72, fc=7, rs=4),
-        op(r=(99, 44, 30, 55), l=(99, 78, 0, 0), ol=99, rs=2, rd=30, rc=0),
-        op(r=(99, 70, 45, 60), l=(99, 55, 0, 0), ol=64, fc=2, rs=3),
-        op(r=(99, 40, 28, 55), l=(99, 70, 0, 0), ol=68, fc=0, det=9, rs=2),
-        op(r=(99, 60, 40, 60), l=(99, 40, 0, 0), ol=42, fc=1, det=5, rs=2),
-    ], fb=3)),
-    ("KOTO B", voice("KOTO B", 5, [                 # brighter: a harder click, more of the second partial
-        op(r=(99, 88, 60, 70), l=(99, 75, 0, 0), ol=85, rs=3, rd=30, rc=0),
-        op(r=(99, 95, 50, 80), l=(99, 0, 0, 0), ol=80, fc=11, rs=4),
-        op(r=(99, 46, 32, 55), l=(99, 80, 0, 0), ol=99, rs=2, rd=30, rc=0),
-        op(r=(99, 66, 45, 60), l=(99, 60, 0, 0), ol=72, fc=2, rs=3),
-        op(r=(99, 42, 28, 55), l=(99, 65, 0, 0), ol=60, fc=0, det=9, rs=2),
-        op(r=(99, 60, 40, 60), l=(99, 40, 0, 0), ol=48, fc=1, det=5, rs=2),
-    ], fb=4)),
-    ("KOTO WARM", voice("KOTO WARM", 5, [           # rounder: less click, more of the octave below
-        op(r=(99, 80, 60, 70), l=(99, 60, 0, 0), ol=70, rs=3, rd=20, rc=0),
-        op(r=(99, 90, 50, 80), l=(99, 0, 0, 0), ol=60, fc=5, rs=4),
-        op(r=(99, 42, 28, 55), l=(99, 80, 0, 0), ol=99, rs=2, rd=35, rc=0),
-        op(r=(99, 72, 45, 60), l=(99, 50, 0, 0), ol=56, fc=1, rs=3),
-        op(r=(99, 38, 26, 55), l=(99, 72, 0, 0), ol=78, fc=0, det=8, rs=2),
-        op(r=(99, 60, 40, 60), l=(99, 40, 0, 0), ol=36, fc=1, det=6, rs=2),
+        op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=75, rs=2, rd=25, rc=0),
+        op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=82, fc=2, rs=4),
+        op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=89, rs=2, rd=30, rc=0),
+        op(r=(99, 60, 32, 60), l=(99, 91, 90, 0), ol=91, fc=1, rs=3),
+        op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=70, fc=1, det=9, rs=2),
+        op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=84, fc=1, det=5, rs=2),
+    ], fb=2)),
+    ("KOTO B", voice("KOTO B", 5, [                 # brighter: the twang stack at ratio 3, harder
+        op(r=(99, 52, 95, 60), l=(99, 87, 0, 0), ol=80, rs=2, rd=25, rc=0),
+        op(r=(99, 93, 32, 60), l=(99, 90, 34, 0), ol=99, fc=3, rs=4),
+        op(r=(99, 99, 32, 60), l=(99, 91, 0, 0), ol=89, rs=2, rd=30, rc=0),
+        op(r=(99, 40, 26, 60), l=(99, 99, 86, 0), ol=84, fc=1, rs=3),
+        op(r=(99, 95, 54, 60), l=(99, 83, 0, 0), ol=87, fc=1, det=9, rs=2),
+        op(r=(99, 28, 77, 60), l=(99, 67, 8, 0), ol=75, fc=1, det=5, rs=2),
+    ], fb=5)),
+    ("KOTO WARM", voice("KOTO WARM", 5, [           # A, rounder: less twang and body index, more of stack C
+        op(r=(99, 45, 71, 60), l=(99, 72, 0, 0), ol=72, rs=2, rd=25, rc=0),
+        op(r=(99, 45, 95, 60), l=(99, 90, 0, 0), ol=72, fc=2, rs=4),
+        op(r=(99, 58, 34, 60), l=(99, 95, 0, 0), ol=89, rs=2, rd=30, rc=0),
+        op(r=(99, 60, 32, 60), l=(99, 91, 90, 0), ol=85, fc=1, rs=3),
+        op(r=(99, 69, 18, 60), l=(99, 87, 0, 0), ol=78, fc=1, det=9, rs=2),
+        op(r=(99, 26, 10, 60), l=(99, 99, 97, 0), ol=70, fc=1, det=5, rs=2),
     ], fb=2)),
     ("HARP SOFT", voice("HARP SOFT", 5, [           # a harp-like pluck: softer attack, long even decay
         op(r=(95, 70, 50, 65), l=(99, 70, 0, 0), ol=80, rs=2, rd=20, rc=0),

@@ -73,6 +73,7 @@ to put into `bench/sessions/`.
 - `tools/analyze_ref.py`: reference-audio analysis (pitch per note, spectral peaks, attack, click, decay, partials).
 - `tools/syx_dump.py`: dump and diff DX7 voices.
 - `tools/fumi_patches.py`: FuMi's own patches, as readable operator settings, into `fumi_patches.h`.
+- `tools/koto_search.c`: a search over the engine's settings against the ST-50 koto measurements (how KOTO A and B were found).
 - `tools/gen_fm6_tables.py`: the FM6 core's tables.
 - `tools/guard_platform.sh`: fails if any protected platform file differs from upstream FoMni.
 
