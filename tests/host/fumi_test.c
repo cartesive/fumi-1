@@ -608,10 +608,17 @@ int main(void)
         fm_set(P_LOOP_BEATS, 64);
         fm_loop_rec();
         run(0, 256);
-        for (k = 0; k < 530; k++) {               /* 1060 events offered, 1024 fit */
+        fm_key(20, 1);                            /* one tap first: the store then fills between a pair's two
+                                                   * presses and their releases */
+        run(0, 256);
+        fm_key(20, 0);
+        run(0, 256);
+        for (k = 0; k < 270; k++) {               /* two keys at a time: 1082 events offered, 1024 fit */
             fm_key(k % FM_NKEY, 1);
+            fm_key((k + 1) % FM_NKEY, 1);
             run(0, 256);
             fm_key(k % FM_NKEY, 0);
+            fm_key((k + 1) % FM_NKEY, 0);
             run(0, 256);
         }
         fm_loop_rec();
