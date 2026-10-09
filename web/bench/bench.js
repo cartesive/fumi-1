@@ -650,8 +650,7 @@ async function switchOn() {
     ready = true;
     go.hidden = true;
     $("status").textContent = ac.sampleRate === 44100 ? "On." : `On (the browser runs audio at ${ac.sampleRate} Hz).`;
-    param("Level", +$("benchlevel").value);
-    param("Reverb", 10);
+    param("Level", +$("benchlevel").value);               // the rest starts at the engine's own defaults
     const saved = (() => { try { return JSON.parse(localStorage.getItem(STORE) || "null"); } catch { return null; } })();
     if (saved && saved.patches && saved.patches.length) {
       const builtins = S.patches.splice(0);

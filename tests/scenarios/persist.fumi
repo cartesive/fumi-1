@@ -4,7 +4,7 @@ spin K1 -20
 tap LFO
 wait 50
 expect par0 6
-expect par8 40
+expect par8 60
 expect par10 1
 expect dirty 1
 tap SAVE
@@ -14,7 +14,7 @@ expect store_writes 1
 reboot
 wait 100
 expect par0 6
-expect par8 40
+expect par8 60
 expect par10 1
 # autosave: a change, then quiet for a while
 spin SELECT -1

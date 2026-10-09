@@ -29,7 +29,7 @@ const pk = render(8192);
 check("a note by pitch sounds", pk > 0.02 && pk < 1);
 check("one voice", ex.web_nvoices() === 1);
 ex.web_note(5, 0, 0);
-render(44100 * 2);
+render(44100 * 3);                                      // 余韻 80: about 2.4 s to -60 dB
 check("let go: quiet again", ex.web_nvoices() === 0);
 // a patch in and back
 const p = new Uint8Array(b0);
