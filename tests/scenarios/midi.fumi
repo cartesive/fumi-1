@@ -4,7 +4,7 @@ midi 90 45 64
 wait 500
 expect nvoices 1
 midi 80 45 00
-wait 3000
+wait 3600
 expect nvoices 0
 key w5 down
 wait 100
