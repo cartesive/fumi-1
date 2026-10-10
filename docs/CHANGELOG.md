@@ -3,6 +3,16 @@
 Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 reports the identity
 (`python3 tools/fm1_install.py --info`).
 
+## 1.0.5 (10 Oct 2026) — `FM-1_7010005`
+
+- **Each loop layer keeps its instrument.** Loop a koto phrase, turn PRESETS to the shakuhachi and play
+  over it: the koto stays a koto, the overdub is a shakuhachi layer, and so on for up to eight instruments
+  in one loop (a ninth follows PRESETS). A layer's instrument is the one playing at its first note. In
+  1.0.4 the whole loop changed with PRESETS. The eight voices are shared between the loop and the hands,
+  as before.
+- **Louder, by 9 dB.** The output trim is now 21 dB below 0.1 (`OUT_TRIM` 0.0891), half way between
+  1.0.2's 12 dB and 1.0.3's 30 dB. MASTER and Level still work above it.
+
 ## 1.0.4 (10 Oct 2026) — `FM-1_7010004`
 
 - **A looper on REC and PLAY.** Tap REC to arm; the first key you play starts the loop; tap REC again to

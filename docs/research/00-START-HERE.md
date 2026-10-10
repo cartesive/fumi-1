@@ -70,7 +70,7 @@ All pitch maths in cents as floats: see `tuning-reference.md` for the formula (i
 | SEL | 調律: 平均律 / 純正律; hold for depth, 微調 | 調律 switch, 微調 |
 | SEQ | Black-key mode: upper row / ornaments | — |
 | FX, EDIT, HOME, SAVE | Pages | — |
-| REC | The looper (1.0.4): tap: arm, the first key starts the loop; tap again: close, it plays; while playing: overdub on / off. Held 1 s: clear | 自動伴奏 記憶 (record) |
+| REC | The looper (1.0.4): tap: arm, the first key starts the loop; tap again: close, it plays; while playing: overdub on / off. Held 1 s: clear. Each layer keeps the instrument it was recorded in (1.0.5) | 自動伴奏 記憶 (record) |
 | PLAY | Looper: stop / start from the top. Held 1 s: undo the top layer | 再生 / 停止 |
 | ENV | The Loop page: BPM, beats, click | — |
 

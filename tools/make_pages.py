@@ -84,7 +84,7 @@ and REC is a looper, as the ST-50's 自動伴奏 was: play a phrase, loop it, pl
 <div class="status"><strong>Version __VERSION__.</strong> It installs and uninstalls the way Felucca, X0X and
 FoMni do, and the installer can put M-VAVE's own firmware back. Installing is at your own risk; read the
 notes on the install page first. Your FM-1 should be on M-VAVE's V15 before any custom firmware. FuMi-1 is
-quiet on purpose at low MASTER settings: turn MASTER up.</div>
+quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div>
 <nav class="ways" aria-label="Get FuMi-1">
   <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0; no FM-1 needed.</span></a>
   <a href="install/"><strong>Install</strong><span>From Chrome or Edge, with the FM-1 connected by USB. Nothing to install on the computer.</span></a>
@@ -104,7 +104,7 @@ quiet on purpose at low MASTER settings: turn MASTER up.</div>
 <tr><td>LFO · ARP · GLO</td><td>Vibrato, trill, mono (slide between notes).</td></tr>
 <tr><td>SEL</td><td>Tap: 平均律 ↔ 純正律. Hold: the tuning page (EQUAL, SUIKO as measured, KOTO pure fifths, USER; depth; 微調; A = 430–445).</td></tr>
 <tr><td>KNOB 1–4</td><td>The page's four values. HOME: 余韻, trill rate, vibrato depth, reverb. FX: low cut, high cut, character, reverb size. EDIT: bend target, bend down, bend time, slide time.</td></tr>
-<tr><td>REC</td><td>The looper. Tap: arm, and the first key starts the loop. Tap again: the loop closes where you are and plays (or it closes itself at 32 beats of 60 BPM). While it plays: overdub on / off. Hold a second: clear.</td></tr>
+<tr><td>REC</td><td>The looper. Tap: arm, and the first key starts the loop. Tap again: the loop closes where you are and plays (or it closes itself at 32 beats of 60 BPM). While it plays: overdub on / off. Each layer keeps the instrument it was recorded in, so turn PRESETS and play over it. Hold a second: clear.</td></tr>
 <tr><td>PLAY</td><td>Stop / start the loop from the top. Hold a second: undo the last layer.</td></tr>
 <tr><td>ENV</td><td>The Loop page: BPM, length in beats, click.</td></tr>
 <tr><td>SAVE</td><td>Saves. FuMi-1 also saves by itself a few seconds after a change, once it's quiet.</td></tr>

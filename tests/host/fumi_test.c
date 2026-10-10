@@ -501,6 +501,13 @@ int main(void)
         CHECK_NEAR("本数 up two: the loop follows (+200 cents)", tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 220.0), 200.0, 15.0);
         fm_set(P_HON, 4);
         run(0, (int)P);
+        /* 1.0.5: a layer keeps the instrument it was recorded in; PRESETS turns only what the hands play */
+        fm_set(P_VOICE, slot_of("Hyoshigi"));
+        run(0, (int)P);
+        run(0, (int)P);
+        CHECK("PRESETS turned while the loop plays: the loop still sounds in the instrument it was recorded in", pass_diff(P) < 1e-5f);
+        fm_set(P_VOICE, slot_of("Mokugyo"));
+        run(0, (int)P);
         /* overdub: a second note on a new layer, half way round; undo takes it away again. The windows compared
          * start at the loop's start every time (the counts of 256-frame renders keep the phase) */
         fm_loop_rec();
@@ -517,6 +524,66 @@ int main(void)
         run(0, (int)P - 256 - (int)P / 2 - 256 * 12);   /* the rest of this pass */
         run(0, (int)P);
         CHECK("the pass has the second note in it", pass_diff(P) > 0.003f);
+        /* 1.0.5: a third layer in another instrument; each layer keeps its own through later turns of PRESETS */
+        fm_set(P_VOICE, slot_of("Hyoshigi"));
+        fm_loop_rec();
+        run(0, 256);
+        run(0, (int)P / 4);
+        fm_key(12, 1);
+        run(0, 256 * 4);
+        fm_key(12, 0);
+        run(0, 256);
+        fm_loop_rec();
+        run(0, 256);
+        CHECK("a third layer, in the sticks", fm_loop_state == LP_PLAY && fm_loop_layers == 3 && fm_loop_events == 6);
+        run(0, (int)P - 256 - (int)P / 4 - 256 * 6);
+        run(0, (int)P);
+        memcpy(ref, buf, P * sizeof buf[0]);        /* the three layers, two instruments */
+        fm_set(P_VOICE, slot_of("Koto"));
+        run(0, (int)P);
+        run(0, (int)P);
+        CHECK("PRESETS to Koto: the fish and the sticks still play as themselves", pass_diff(P) < 1e-5f);
+        {                                         /* and a key played now is the koto: it rings where the fish is long gone */
+            float early, late;
+            fm_set(P_LOOP_BPM, 120);
+            fm_loop_play();                       /* stopped: only the hands sound */
+            run(0, 44032);
+            fm_key(14, 1);
+            early = run(0, 2205);
+            run(0, 2205 * 3);
+            late = run(0, 4410);
+            fm_key(14, 0);
+            run(0, 44032);
+            printf("  live key after the turn to Koto: %.1f dB at the pluck, %.1f dB at 200-300 ms\n", db(early), db(late));
+            CHECK("the hands play the current instrument (the koto still rings 200 ms in; the fish would be 30 dB down)", db(late) > db(early) - 20.0);
+            fm_loop_play();                       /* playing again, from the top */
+            run(0, 256);
+        }
+        fm_set(P_VOICE, slot_of("Mokugyo"));
+        fm_loop_undo();                           /* the third layer goes */
+        run(0, (int)P - 256);
+        run(0, (int)P);
+        run(0, (int)P);
+        memcpy(ref, buf, P * sizeof buf[0]);
+        run(0, (int)P);
+        CHECK("undo of the third layer: two layers play the same, pass after pass", fm_loop_layers == 2 && pass_diff(P) < 1e-5f);
+        /* back to the two-layer reference for the undo check below: the first pass, kept at the top, is rebuilt */
+        fm_loop_undo();
+        run(0, (int)P);
+        run(0, (int)P);
+        memcpy(ref, buf, P * sizeof buf[0]);
+        fm_loop_rec();                            /* the second note again, as above */
+        run(0, 256);
+        run(0, (int)P / 2);
+        fm_key(8, 1);
+        run(0, 256 * 10);
+        fm_key(8, 0);
+        run(0, 256);
+        fm_loop_rec();
+        run(0, 256);
+        run(0, (int)P - 256 - (int)P / 2 - 256 * 12);
+        run(0, (int)P);
+        CHECK("the second layer again: the pass has the second note in it", fm_loop_layers == 2 && pass_diff(P) > 0.003f);
         fm_loop_undo();
         run(0, (int)P);                           /* the pass after the undo: the removed layer's tails go */
         run(0, (int)P);

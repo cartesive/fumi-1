@@ -18,16 +18,15 @@ FuMi lives in `firmware/src/app/` and `firmware/src/dsp/`.
 
 <img src="docs/img/screen-home.png" width="240" height="240" alt="FuMi-1's HOME screen: 1本, A3, SUIKO tuning, the in scale, and the koto 琴 large"> <img src="docs/img/screen-loop.png" width="240" height="240" alt="FuMi-1 overdubbing a loop: the DUB tag and the loop bar under the keys">
 
-**Status (10 Oct 2026):** version 1.0.4 (identity `FM-1_7010004`). It has run on one FM-1, the author's,
+**Status (10 Oct 2026):** version 1.0.5 (identity `FM-1_7010005`). It has run on one FM-1, the author's,
 since 0.1. What works: the pitch core and the measured tuning, thirteen instruments with their names in
 kanji, the bends, ornaments, vibrato, trill, 余韻, mono with slide, the voicing stages, reverb, MIDI in and
 out, the looper, the host simulator, the browser emulator, the audition bench and the web installer. What
-is next: a loop that survives power-off, a second instrument for the overdub, and key slide for the
-shakuhachi. Releases are listed in `docs/CHANGELOG.md`; the research and the plan are in `docs/research/`
+is next: a loop that survives power-off and key slide for the shakuhachi. Releases are listed in `docs/CHANGELOG.md`; the research and the plan are in `docs/research/`
 (`00-START-HERE.md` is the current truth).
 
-FuMi-1 is deliberately quiet at low MASTER settings, as the Suiko is a gentle instrument: turn MASTER up.
-Turn it down again before switching back to another firmware.
+FuMi-1 is quieter than the stock firmware at the same MASTER setting, as the Suiko is a gentle
+instrument: turn MASTER up. Turn it down again before switching back to another firmware.
 
 ## Sixty seconds
 
@@ -106,8 +105,11 @@ played, nothing is quantised.
   the LFO, ARP and GLO buttons, and MASTER, so your left hand shapes the level of everything live.
 - The loop stores keys, not pitches: change 本数 or the tuning while it plays and the loop follows. Notes
   ringing across the join keep ringing. A note still held when a layer ends is let go in the recording.
-- The loop plays in the current instrument, so a koto phrase played back after a turn of PRESETS is a
-  shakuhachi phrase. It lives in memory until the FM-1 is switched off; it does not go out over MIDI.
+- Each layer keeps the instrument it was recorded in. Loop a koto phrase, turn PRESETS to the shakuhachi
+  and play over it: the koto goes on being a koto under your shakuhachi, and an overdub now is a
+  shakuhachi layer. A layer's instrument is the one playing at its first note; a loop holds up to eight
+  instruments at once. The eight voices are shared between the loop and your hands. The loop lives in
+  memory until the FM-1 is switched off; it does not go out over MIDI.
   REC lights red while recording and blinks while armed; PLAY lights while the loop plays; a thin bar under
   the keys shows where the loop is. Nothing autosaves while a loop runs.
 
@@ -193,8 +195,7 @@ to put into `bench/sessions/`.
 ## Where to talk
 
 [Issues](https://github.com/cartesive/fumi-1/issues) on GitHub, for what you find and what you would like.
-The roadmap, in short: a loop that survives power-off, a second instrument for the overdub, key slide for
-the shakuhachi.
+The roadmap, in short: a loop that survives power-off, key slide for the shakuhachi.
 
 ## Credits
 

@@ -160,9 +160,18 @@ volatile uint8_t fm_patch_custom;
 static int16_t par[P_NPARAMS];
 static tuning_t tun;
 static bend_t bend;
-static uint8_t patch[FP_SIZE + 1];                /* the current voice, unpacked */
-static fm6_lfo_t plfo;
-static int32_t lfo_v, lfo_d;
+/* the patches the voices read, unpacked, each with the patch's LFO. Slot 0 is the current instrument, the one
+ * PRESETS turns; the loop's layers keep the instrument they were recorded in, in slots of their own (1.0.5) */
+#define LP_NPAT 8                                 /* instruments a loop can hold at once; beyond, a layer follows PRESETS */
+typedef struct {
+    uint8_t v[FP_SIZE + 1];
+    uint8_t pk[FM6_PACKED];                       /* as packed: two layers in one instrument share a slot */
+    fm6_lfo_t lfo;
+    int32_t lfo_v, lfo_d;                         /* this block's LFO (controls_block) */
+    uint8_t used;
+} pslot_t;
+static pslot_t ps[1 + LP_NPAT] FM_POOL;
+#define patch (ps[0].v)                           /* the current instrument */
 static const int32_t DT0[6] = {0, 0, 0, 0, 0, 0};
 
 typedef struct {
@@ -175,6 +184,7 @@ typedef struct {
     float yo_g, yo_m;                             /* 余韻: the release gain and its multiplier per sample */
     float g, dc, lvl;                             /* last block's gain (ramps), DC blocker, level for the lights */
     uint8_t down, live, vel;
+    uint8_t slot;                                 /* the patch it plays (ps) */
     uint32_t order;
 } voice_t;
 static voice_t vc[FM_NVOICE];
@@ -193,9 +203,9 @@ static float vib_ph, vib_inc, vib_depth, vib_cur;
 static float trill_left, trill_period, trill_var;
 static uint32_t rnd = 0x1234567u;
 static smooth_t level_sm;
-#define OUT_TRIM 0.03125f                          /* -30 dB at the output. 0.1 was far too loud on the FM-1's speaker at the
-                                                    * lowest MASTER setting; -12 dB (1.0.2) still was: Suiko is a gentle
-                                                    * instrument (1.0.3). MASTER and Level work above this */
+#define OUT_TRIM 0.0891f                           /* -21 dB at the output: half way between 1.0.2's -12 dB (still loud at the
+                                                    * lowest MASTER on the FM-1's speaker) and 1.0.3's -30 dB (the owner found
+                                                    * it too far down, 1.0.5). MASTER and Level work above this */
 static float level_cur;
 static float yo_mult;                             /* 余韻: the multiplier per sample after key-up */
 static float k_fast, k_slide;                     /* the voice smoother's coefficients: 12 ms, the slide time */
@@ -307,7 +317,7 @@ static int alloc_voice(void)
 }
 
 /* (re)start voice i on pitch `cents` (from A4) for key id; fresh = from silence */
-static void pluck(int i, int id, float cents, float next_up, int fresh)
+static void pluck(int i, int id, float cents, float next_up, int fresh, int slot)
 {
     voice_t *v = &vc[i];
     int vel = orn[ORN_STRONG] ? 127 : 100;
@@ -331,8 +341,9 @@ static void pluck(int i, int id, float cents, float next_up, int fresh)
     v->live = 1;
     v->vel = (uint8_t)vel;
     v->order = ++order_n;
-    fm6_note_init(&v->n, patch, mn, vel, fresh);
-    fm6_lfo_key(&plfo);
+    v->slot = (uint8_t)slot;
+    fm6_note_init(&v->n, ps[slot].v, mn, vel, fresh);
+    fm6_lfo_key(&ps[slot].lfo);
     if (lp_key_of(id) >= 0)
         lp_bend_voice = i;
     else
@@ -414,7 +425,7 @@ static void note_on(int id, float cents, float next_up)
     int i = find_voice(id), lv;
     held_push(id);
     if (i >= 0) {                                  /* the same key again: re-excite its own voice */
-        pluck(i, id, cents, next_up, 0);
+        pluck(i, id, cents, next_up, 0, 0);
         return;
     }
     lv = legato_voice();
@@ -422,7 +433,7 @@ static void note_on(int id, float cents, float next_up)
         if (par[P_SLIDE])
             slide_to(lv, id, cents, next_up);
         else
-            pluck(lv, id, cents, next_up, 0);
+            pluck(lv, id, cents, next_up, 0, 0);
         return;
     }
     if (par[P_SLIDE] && lv >= 0) {                 /* SLIDE in 和音: the most recent voice slides, the rest ring */
@@ -431,9 +442,9 @@ static void note_on(int id, float cents, float next_up)
     }
     i = alloc_voice();
 #ifdef FM_NO_SMOOTH
-    pluck(i, id, cents, next_up, 1);
+    pluck(i, id, cents, next_up, 1, 0);
 #else
-    pluck(i, id, cents, next_up, !vc[i].live);
+    pluck(i, id, cents, next_up, !vc[i].live, 0);
 #endif
 }
 
@@ -450,7 +461,7 @@ static void note_off(int id)
         if (par[P_SLIDE])
             slide_to(lv, back, c, nu);
         else
-            pluck(lv, back, c, nu, 0);
+            pluck(lv, back, c, nu, 0, 0);
         return;
     }
     release(i);
@@ -509,6 +520,9 @@ static lp_ev_t lp_ev[LP_NEV] FM_POOL;
 static uint32_t lp_n, lp_len, lp_pos, lp_next, lp_max, lp_keys_down, lp_other_down, lp_orn_on;
 #define LP_ROOM 33u                               /* a press is taken only with room for every release: 27 keys, 4 ornaments, 2 bends */
 static uint8_t lp_state, lp_layer, lp_click_on;
+#define LP_NOSLOT 0xFFu
+static uint8_t lp_lslot[256];                     /* the instrument of each layer: a slot of ps; LP_NOSLOT until its first event */
+static int lp_slot_of(uint8_t layer) { return lp_lslot[layer] == LP_NOSLOT ? 0 : lp_lslot[layer]; }
 static float lp_beat, lp_click_at, lp_click_ph, lp_click_inc, lp_click_g;
 volatile uint8_t fm_loop_state, fm_loop_layers;
 volatile uint32_t fm_loop_pos, fm_loop_len, fm_loop_events;
@@ -533,6 +547,38 @@ static void lp_quiet(void)                       /* stop, undo, clear: what the 
     bend_targets();
 }
 
+static int lp_slot_take(void)                     /* a slot holding the current instrument, for the layer starting now */
+{
+    uint32_t k, s, layers = 0, voices = 0;
+    for (s = 1; s <= LP_NPAT; s++) {              /* the same instrument as a layer already here: share */
+        if (!ps[s].used)
+            continue;
+        for (k = 0; k < FM6_PACKED && ps[s].pk[k] == patch_cur_packed[k]; k++)
+            ;
+        if (k == FM6_PACKED)
+            return (int)s;
+    }
+    for (k = 0; k < lp_n; k++)                    /* the slots the layers here still need */
+        layers |= 1u << lp_slot_of(lp_ev[k].layer);
+    for (k = 0; k < FM_NVOICE; k++)               /* and the ones a tail still reads: taken last */
+        if (vc[k].live)
+            voices |= 1u << vc[k].slot;
+    for (s = 1; s <= LP_NPAT; s++)
+        if (!(layers >> s & 1u) && !(voices >> s & 1u))
+            break;
+    if (s > LP_NPAT)
+        for (s = 1; s <= LP_NPAT && (layers >> s & 1u); s++)
+            ;
+    if (s > LP_NPAT)
+        return 0;                                 /* eight instruments already: this layer follows PRESETS */
+    for (k = 0; k < FM6_PACKED; k++)
+        ps[s].pk[k] = patch_cur_packed[k];
+    fm6_unpack(ps[s].pk, ps[s].v);
+    fm6_lfo_reset(&ps[s].lfo, ps[s].v);
+    ps[s].used = 1;
+    return (int)s;
+}
+
 static int lp_is_press(const lp_ev_t *e)         /* a press, an ornament on, a bend down: what sounds live already */
 {
     uint32_t c = e->c & 0x7Fu;
@@ -543,14 +589,14 @@ static void lp_play_ev(const lp_ev_t *e)
 {
     switch (e->c & 0x7Fu) {
     case C_KEY: {
-        int id = LP_ID0 + e->a, i = find_voice(id);
+        int id = LP_ID0 + e->a, i = find_voice(id), slot = lp_slot_of(e->layer);
         if (e->b) {
             float nu, cents = key_cents(e->a, &nu);
             if (i >= 0) {
-                pluck(i, id, cents, nu, 0);
+                pluck(i, id, cents, nu, 0, slot);
             } else {
                 i = alloc_voice();
-                pluck(i, id, cents, nu, !vc[i].live);
+                pluck(i, id, cents, nu, !vc[i].live, slot);
             }
         } else if (i >= 0) {
             release(i);
@@ -659,6 +705,7 @@ static void lp_cmd(int what)
         case LP_PLAY: case LP_STOP:
             if (lp_layer < 255u)
                 lp_layer++;
+            lp_lslot[lp_layer] = LP_NOSLOT;
             if (lp_state == LP_STOP) {
                 lp_pos = lp_next = 0;
                 lp_click_at = 0.0f;
@@ -729,6 +776,7 @@ static void lp_record(uint32_t c, int a, int b)   /* drain: an input while the l
             return;
         lp_pos = lp_next = 0;                     /* the first key is the loop's start */
         lp_layer = 1;
+        lp_lslot[1] = LP_NOSLOT;
         lp_click_at = 0.0f;
         lp_state = LP_REC;
     }
@@ -738,6 +786,8 @@ static void lp_record(uint32_t c, int a, int b)   /* drain: an input while the l
         int press = c == C_BEND ? (b & 1) != 0 : b != 0;
         if (press && lp_n + LP_ROOM > LP_NEV)
             return;                               /* no room for its release: the press is not taken either */
+        if (lp_lslot[lp_layer] == LP_NOSLOT)      /* the layer's first event: its instrument is the one playing now */
+            lp_lslot[lp_layer] = (uint8_t)lp_slot_take();
         if (!lp_insert(lp_pos, c, a, b, 1))
             return;
     }
@@ -801,7 +851,7 @@ static void adopt_patch(void)
     for (i = 0; i < FM6_PACKED; i++)
         patch_cur_packed[i] = patch_pending[i];
     fm6_unpack(patch_cur_packed, patch);
-    fm6_lfo_reset(&plfo, patch);
+    fm6_lfo_reset(&ps[0].lfo, patch);
     for (i = 0; i < 10u; i++)
         fm_patch_label[i] = (char)patch[FP_NAME + i];
     fm_patch_label[10] = 0;
@@ -877,7 +927,12 @@ void fm_init(void)
         vc[i].yo_g = vc[i].lvl = vc[i].g = vc[i].dc = 0.0f;
         smooth_init(&vc[i].pitch, 12.0f, 0.0f, BLK_MS);
         vc[i].sliding = 0;
+        vc[i].slot = 0;
     }
+    for (i = 0; i <= LP_NPAT; i++)
+        ps[i].used = 0;
+    for (i = 0; i < 256; i++)
+        lp_lslot[i] = LP_NOSLOT;
     for (i = 0; i < FM_NKEY; i++)
         fm_key_level[i] = 0.0f;
     for (i = 0; i < ORN_N; i++)
@@ -977,14 +1032,23 @@ static void controls_block(void)
         if (trill_left <= 0.0f) {
             int id = held[nheld - 1], v = find_voice(id);
             if (v >= 0)
-                pluck(v, id, vc[v].base, vc[v].next_up, 0);
+                pluck(v, id, vc[v].base, vc[v].next_up, 0, vc[v].slot);
             trill_left = trill_period * (1.0f + trill_var * frand());
         }
     } else {
         trill_left = 0.0f;
     }
-    lfo_v = fm6_lfo_sample(&plfo);
-    lfo_d = fm6_lfo_delay(&plfo);
+    {
+        uint32_t in_use = 1u;                     /* the current instrument's LFO runs always; a loop slot's while a voice reads it */
+        for (i = 0; i < FM_NVOICE; i++)
+            if (vc[i].live)
+                in_use |= 1u << vc[i].slot;
+        for (i = 0; i <= LP_NPAT; i++)
+            if (in_use >> i & 1u) {
+                ps[i].lfo_v = fm6_lfo_sample(&ps[i].lfo);
+                ps[i].lfo_d = fm6_lfo_delay(&ps[i].lfo);
+            }
+    }
     for (i = 0; i < FM_NVOICE; i++) {
         voice_t *v = &vc[i];
         if (!v->live)
@@ -999,6 +1063,7 @@ static void render_voices(void)
     float vib = vib_cur * fm_sin_turns(vib_ph);
     for (i = 0; i < FM_NVOICE; i++) {
         voice_t *v = &vc[i];
+        const pslot_t *p = &ps[v->slot];
         int32_t bus[BLK];
         float cents, g0, g1, dg, g, pk = 0.0f;
         if (!v->live)
@@ -1009,9 +1074,9 @@ static void render_voices(void)
             v->pitch.k = k_fast;
         }
         cents += vib;
-        if (!fm6_note_compute(&v->n, patch, bus, lfo_v, lfo_d, fm6_logfreq_cents(cents + 6900.0f), patch[FP_ALG] & 31u,
-                              patch[FP_FB] & 7u, DT0, 0) || (!v->down && v->yo_g < 1e-4f)) {
-            if (fm6_note_done(&v->n, patch, patch[FP_ALG] & 31u) || (!v->down && v->yo_g < 1e-4f)) {
+        if (!fm6_note_compute(&v->n, p->v, bus, p->lfo_v, p->lfo_d, fm6_logfreq_cents(cents + 6900.0f), p->v[FP_ALG] & 31u,
+                              p->v[FP_FB] & 7u, DT0, 0) || (!v->down && v->yo_g < 1e-4f)) {
+            if (fm6_note_done(&v->n, p->v, p->v[FP_ALG] & 31u) || (!v->down && v->yo_g < 1e-4f)) {
                 v->live = 0;
                 v->g = 0.0f;
                 voice_level_for_lights(v, 0.0f);
