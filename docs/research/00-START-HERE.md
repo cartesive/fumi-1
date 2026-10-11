@@ -27,7 +27,7 @@ Consolidated state of the project as of 9 Oct 2026, 19:35. **This file is the cu
 - **White keys 1–15 = the ST-50 lower row:** mi fa la ti do, three times, starting on mi. Key 16 = a bonus top mi. Tonics on keys 1, 6, 11 (and 16). Printed labels under keys: 水 (1), 乙 (3), 一 (4), 二 (5), 三 (6), 三′ (7), 五 (8), 六 (9), 七 (10), 八 (11). 三 is the reference tonic.
 - **Black keys, switchable (SEQ):**
   - Upper-row mode: fa♯, sol, ti♭, do♯, re (200, 300, 600, 900, 1000 cents above mi), five per piano octave.
-  - Ornament mode: momentary techniques on the sounding note (vibrato while held, tremolo re-pluck, strong pluck, damp, one-key glissandi).
+  - Ornament mode: momentary techniques on the sounding note (vibrato while held, tremolo re-pluck, strong pluck, damp, one-key glissandi). From 1.0.7 the three spare keys are the koto's left hand: 押し手 oshide (black 5, the sounding notes a whole tone up while held), 引き色 hikiiro (black 10, each new note dips 40 cents and returns over 150 ms), 後押し atooshi (black 11, each new note pushed up a semitone 200 ms after the pluck).
 
 ### Tuning (measured from two recordings, files 13 and 14)
 
@@ -76,7 +76,7 @@ All pitch maths in cents as floats: see `tuning-reference.md` for the formula (i
 
 **Bend:** role decided at the moment of pressing. With a note held, OCT+ glides the most recent note up to the target (semitone, whole tone or next scale note; about 90 ms up, 120 ms back, S-shaped) and holds until release; a tap is an up-and-back flick; OCT− is a small drop. Both held together stays reserved for update mode. **Key slide** is a per-voice option (on for shakuhachi, off for koto). A control smoother still sits under everything, and a click regression test guards it (file 04).
 
-**Trill:** note repetition at the set speed, not alternation of two pitches. From 1.0.6 it plays in pairs, *ka-ta*, the first stroke the hardest and the *ta* lighter (velocity and a gain trim), a key press restarting the pair; Trill feel 0 is the original's even machine. Oroshi 颪 (None / Short / Medium / Long, on GLO) makes the trill *ornament key* start slow and speed up by a constant ratio; the ARP trill stays plain. FuMi's own instruments respond to velocity so the accents change tone as well as level. Design: the owner's `fumi-1.0.6-ideas.md`, `-extras-ideas.md` and `-more-extras-ideas.md` in Dropbox.
+**Trill:** note repetition at the set speed, not alternation of two pitches. From 1.0.6 it plays in pairs, *ka-ta*, the first stroke the hardest and the *ta* lighter (velocity and a gain trim), a key press restarting the pair; Trill feel 0 is the original's even machine. Oroshi 颪 (None / Short / Medium / Long, on GLO) makes the trill *ornament key* start slow and speed up by a constant ratio; the ARP trill stays plain. FuMi's own instruments respond to velocity so the accents change tone as well as level. Design: the owner's `fumi-1.0.6-ideas.md`, `-extras-ideas.md` and `-more-extras-ideas.md` in Dropbox. 1.0.7: the trill strikes a held key again even when its sound has ended by itself (the hyōshigi's roll works), MIDI in carries velocity, the header shows 颪 in ornament mode while oroshi is set, pair gap and ta level read as words, and the kokyū's bow tremolo is gone (its slowed attack stays).
 
 ### Voices
 

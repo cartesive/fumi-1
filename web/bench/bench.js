@@ -12,7 +12,7 @@ import { serialize, deserialize, reattach, derivedFrom, alreadyLoaded } from "./
 const $ = (id) => document.getElementById(id);
 const STORE = "fumi-bench-session";
 const WHITE_ROW = "qwertyuiasdfghjk", BLACK_ROW = "1234567890-";
-const BLACK_ORN = [0, 1, 2, 3, -1, 0, 1, 2, 3, -1, -1];     // ornament mode (ui.c BLACK_ORN): vib, trill, damp, strong
+const BLACK_ORN = [0, 1, 2, 3, 4, 0, 1, 2, 3, 5, 6];        // ornament mode (ui.c BLACK_ORN): vib, trill, damp, strong, oshide; ..., hikiiro, atooshi
 let node = null, ac = null, P = {}, PARAMS = [], ready = false;
 const S = { patches: [], cur: -1, a: -1, b: -1, blind: null, history: [], morphBase: null };
 const held = new Set();                                      // FuMi key ids down (keyboard + screen)

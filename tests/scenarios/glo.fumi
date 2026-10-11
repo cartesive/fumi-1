@@ -40,3 +40,11 @@ expect view 5
 tap HOME
 wait 50
 expect view 0
+# oroshi is set (K4 above): in ornament mode the header carries 颪, so the player knows the trill key rolls
+snap home
+tap SEQ
+wait 1400
+shot home-oroshi.png
+tap SEQ
+wait 1400
+expect screen home

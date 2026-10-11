@@ -48,7 +48,10 @@ const fm_param_t *fm_param_info(int p);
 void fm_param_text(int p, int v, char *buf);     /* as the screen shows it (12 bytes) */
 
 enum { BEND_T_SEMI, BEND_T_WHOLE, BEND_T_SCALE };          /* P_BEND_UP */
-enum { ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_N };   /* fm_ornament */
+/* fm_ornament: momentary techniques on a group's notes. 1.0.7 adds the koto's left hand: 押し手 oshide (the sounding
+ * note a whole tone up while held), 引き色 hikiiro (each new note dips after the pluck and comes back), 後押し atooshi
+ * (each new note pushed up a semitone a moment after it sounds) */
+enum { ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_OSHIDE, ORN_HIKIIRO, ORN_ATOOSHI, ORN_N };
 enum { ORO_NONE, ORO_SHORT, ORO_MEDIUM, ORO_LONG };          /* P_TRILL_OROSHI: how long the ornament trill takes from slow to the rate */
 
 /* commands (main loop -> render) */
@@ -56,6 +59,7 @@ void fm_init(void);
 void fm_set(int param, int value);
 void fm_key(int key, int on);                    /* a panel key, FM_NKEY ids */
 void fm_note(int id, int on, float cents);       /* any pitch (cents from A4): MIDI, the bench; id >= FM_NOTE_ID */
+void fm_note_vel(int id, int on, float cents, int vel);   /* the same with a velocity 1..127 (MIDI in, 1.0.7) */
 void fm_ornament(int orn, int on);               /* momentary techniques on the sounding notes */
 void fm_bend(int which, int down, int note_held);   /* OCT- / OCT+ (bend.h BEND_DOWN / BEND_UP) */
 void fm_panic(void);

@@ -8,15 +8,18 @@
 #include "tu_yin.h"
 #include "../../firmware/src/dsp/fumi.c"
 
-static uint32_t midi_vel[64], midi_nvel;          /* the note-ons sent: velocity and position (the strokes, 1.0.6) */
+static uint32_t midi_vel[64], midi_note[64], midi_nvel, midi_noff;   /* the note-ons sent: velocity, note and position
+                                                                      (the strokes, 1.0.6); the note-offs counted */
 static int midi_t[64], render_pos;
 void fm_midi_out(uint32_t st, uint32_t d1, uint32_t d2)
 {
-    (void)d1;
     if (st == 0x90u && midi_nvel < 64u) {
         midi_t[midi_nvel] = render_pos;
+        midi_note[midi_nvel] = d1;
         midi_vel[midi_nvel++] = d2;
     }
+    if (st == 0x80u)
+        midi_noff++;
 }
 
 static float buf[3 * 44100];                      /* mono (left) */
@@ -482,6 +485,168 @@ int main(void)
         fm_set(P_TRILL_OROSHI, 0);
         run(0, 44032);
     }
+    {   /* a trill on a sound that ends by itself (1.0.7): the hyoshigi's crack is over in under 200 ms, so between
+         * strokes its voice is gone; the trill must strike the held key again all the same, at the rate and through an
+         * oroshi's slow start (1.0.6 stopped after the KA: one clap, no roll) */
+        int n_plain, n_oro;
+        fm_init();
+        fm_set(P_VOICE, slot_of("Hyoshigi"));
+        fm_set(P_REVERB, 0);
+        fm_set(P_LEVEL, 60);
+        fm_set(P_TRILL_RATE, 50);
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 22016);                            /* the crack long over when the ornament key comes: it strikes again */
+        midi_nvel = 0;
+        fm_ornament(ORN_TRILL, 1);
+        run(0, 132096);                           /* 3 s */
+        fm_ornament(ORN_TRILL, 0);
+        fm_key(5, 0);
+        n_plain = (int)midi_nvel;
+        run(0, 22016);
+        fm_set(P_TRILL_OROSHI, ORO_LONG);
+        fm_key(5, 1);
+        run(0, 256);
+        midi_nvel = 0;
+        fm_ornament(ORN_TRILL, 1);
+        run(0, 132096);
+        fm_ornament(ORN_TRILL, 0);
+        fm_key(5, 0);
+        n_oro = (int)midi_nvel;
+        fm_set(P_TRILL_OROSHI, 0);
+        run(0, 22016);
+        printf("  Hyoshigi trill: %d strokes in 3 s plain, %d with oroshi Long\n", n_plain, n_oro);
+        CHECK("Hyoshigi: the trill goes on striking though each crack has ended (15 or more strokes in 3 s)", n_plain >= 15);
+        CHECK("Hyoshigi: the oroshi rolls from slow to the rate (5 or more strokes in 3 s on Long)", n_oro >= 5);
+        /* review (1.0.7): the key the trill strikes is the top of the held stack, whatever was plucked last */
+        fm_key(5, 1);
+        run(0, 256);
+        fm_key(7, 1);
+        run(0, 256);
+        fm_ornament(ORN_TRILL, 1);
+        run(0, 11008);
+        fm_key(7, 0);
+        run(0, 256);
+        midi_nvel = 0;
+        run(0, 44032);
+        n_plain = (int)midi_nvel;
+        fm_ornament(ORN_TRILL, 0);
+        fm_key(5, 0);
+        run(0, 22016);
+        printf("  Hyoshigi trill back on the key still held: %d strokes in 1 s\n", n_plain);
+        CHECK("Hyoshigi: two keys down, the top released: the trill goes on on the one still held", n_plain >= 5);
+        /* and a retune while it rolls: the strokes follow (the octave up) */
+        fm_key(5, 1);
+        run(0, 256);
+        midi_nvel = 0;
+        fm_ornament(ORN_TRILL, 1);
+        run(0, 22016);
+        fm_set(P_OCTAVE, 1);
+        run(0, 22016);
+        n_oro = (int)midi_nvel;
+        fm_ornament(ORN_TRILL, 0);
+        fm_key(5, 0);
+        fm_set(P_OCTAVE, 0);
+        run(0, 22016);
+        printf("  Hyoshigi trill across an octave switch: first note %u, last %u\n", midi_note[0], midi_note[n_oro - 1]);
+        CHECK("Hyoshigi: the strokes follow a retune while the trill rolls", n_oro >= 6 && midi_note[n_oro - 1] == midi_note[0] + 12u);
+        /* a sound that ends by itself with the key still down sends its MIDI note-off then, not never */
+        midi_noff = 0;
+        fm_key(5, 1);
+        run(0, 22016);
+        CHECK("Hyoshigi: the note-off goes out when the crack ends, the key still down", midi_noff == 1u);
+        fm_key(5, 0);
+        run(0, 22016);
+        CHECK("and not again at the key-up", midi_noff == 1u);
+    }
+    {   /* the koto's left hand on the three empty ornament keys (1.0.7): 押し手 oshide presses the string behind the
+         * bridge, the sounding note up a whole tone while the key is held; 引き色 hikiiro lets each new note dip after the
+         * pluck and come back; 後押し atooshi pushes each new note up a semitone a moment after it sounds */
+        uint8_t pk[128];
+        double p0, p1, p2;
+        fm_init();
+        sustain_patch(pk, 99);
+        fm_patch_set(pk);
+        fm_set(P_REVERB, 0);
+        fm_set(P_YOIN, 0);
+        fm_set(P_LEVEL, 60);
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 22016);
+        p0 = tu_cents(tu_yin(buf + 11000, 8000, 44100.0), 220.0);
+        fm_ornament(ORN_OSHIDE, 1);
+        run(0, 22016);
+        p1 = tu_cents(tu_yin(buf + 11000, 8000, 44100.0), 220.0);
+        fm_ornament(ORN_OSHIDE, 0);
+        run(0, 22016);
+        p2 = tu_cents(tu_yin(buf + 11000, 8000, 44100.0), 220.0);
+        printf("  oshide: %.1f cents, held %.1f, released %.1f\n", p0, p1, p2);
+        CHECK_NEAR("oshide held: the sounding note a whole tone up", p1 - p0, 200.0, 6.0);
+        CHECK_NEAR("oshide released: back on the string's pitch", p2 - p0, 0.0, 6.0);
+        {   /* a note plucked under oshide is already pressed: it sounds a whole tone up from its first ms (review) */
+            fm_key(5, 0);
+            run(0, 22016);
+            fm_ornament(ORN_OSHIDE, 1);
+            run(0, 22016);
+            fm_key(5, 1);
+            run(0, 2205);
+            p1 = tu_cents(tu_yin(buf + 220, 1764, 44100.0), 220.0);   /* 5-45 ms */
+            printf("  plucked under oshide, 5-45 ms: %.1f cents up\n", p1 - p0);
+            CHECK_NEAR("plucked under oshide: a whole tone up from the start, no swoop", p1 - p0, 200.0, 12.0);
+            fm_ornament(ORN_OSHIDE, 0);
+            run(0, 22016);
+        }
+        {   /* oshide comes in over about 80 ms, not at once */
+            fm_ornament(ORN_OSHIDE, 1);
+            run(0, 4410);
+            p1 = tu_cents(tu_yin(buf + 441, 1764, 44100.0), 220.0);   /* 10-50 ms in: on the way */
+            printf("  oshide 10-50 ms in: %.1f cents up\n", p1 - p0);
+            CHECK("oshide rises over tens of ms (10-50 ms in: between 40 and 180 cents)", p1 - p0 > 40.0 && p1 - p0 < 180.0);
+            fm_ornament(ORN_OSHIDE, 0);
+            run(0, 22016);
+        }
+        fm_key(5, 0);
+        run(0, 22016);
+        fm_ornament(ORN_HIKIIRO, 1);
+        fm_key(5, 1);
+        run(0, 22016);
+        p1 = tu_cents(tu_yin(buf + 441, 2205, 44100.0), 220.0);        /* 10-60 ms: the dip */
+        p2 = tu_cents(tu_yin(buf + 13230, 8000, 44100.0), 220.0);      /* 300-480 ms: recovered */
+        printf("  hikiiro: 10-60 ms %.1f cents, 300 ms on %.1f (string %.1f)\n", p1, p2, p0);
+        CHECK("hikiiro: a new note dips 20 to 45 cents just after the pluck", p0 - p1 > 20.0 && p0 - p1 < 45.0);
+        CHECK_NEAR("hikiiro: and is back on the string's pitch within 300 ms", p2 - p0, 0.0, 4.0);
+        fm_key(5, 0);
+        fm_ornament(ORN_HIKIIRO, 0);
+        run(0, 22016);
+        fm_ornament(ORN_ATOOSHI, 1);
+        fm_key(5, 1);
+        run(0, 44032);
+        p1 = tu_cents(tu_yin(buf + 2205, 4410, 44100.0), 220.0);       /* 50-150 ms: as plucked */
+        p2 = tu_cents(tu_yin(buf + 17640, 8000, 44100.0), 220.0);      /* 400-580 ms: pushed */
+        printf("  atooshi: 50-150 ms %.1f cents, 400 ms on %.1f (string %.1f)\n", p1, p2, p0);
+        CHECK_NEAR("atooshi: a new note sounds on the string's pitch first", p1 - p0, 0.0, 4.0);
+        CHECK_NEAR("atooshi: and is pushed up a semitone a moment later", p2 - p0, 100.0, 6.0);
+        fm_key(5, 0);
+        fm_ornament(ORN_ATOOSHI, 0);
+        run(0, 22016);
+        CHECK("seven ornaments", ORN_N == 7);
+    }
+    {   /* the Trill page's shapes read as words (1.0.7): pair gap from even to tight, ta level from the same to faint */
+        char t[16];
+        int ok = 1;
+        static const struct { int p, v; const char *w; } W[] = {
+            {P_TRILL_PAIR, 50, "Even"}, {P_TRILL_PAIR, 47, "Loose"}, {P_TRILL_PAIR, 42, "Paired"}, {P_TRILL_PAIR, 30, "Tight"},
+            {P_TRILL_TA, 100, "Same"}, {P_TRILL_TA, 90, "Softer"}, {P_TRILL_TA, 64, "Light"}, {P_TRILL_TA, 30, "Faint"},
+            {P_TRILL_FIRST, 127, "127"}, {P_TRILL_JIT, 5, "5"}};
+        for (i = 0; i < (int)(sizeof W / sizeof W[0]); i++) {
+            fm_param_text(W[i].p, W[i].v, t);
+            if (strcmp(t, W[i].w)) {
+                printf("  param %d at %d reads \"%s\", want \"%s\"\n", W[i].p, W[i].v, t, W[i].w);
+                ok = 0;
+            }
+        }
+        CHECK("pair gap and ta level read as words; first stroke and jitter as numbers", ok);
+    }
     {   /* Kokyu 胡弓 (1.0.6): the bowed voice, placed before Taiko as on the ST-50; the note swells in */
         double a, b, c;
         CHECK("fourteen instruments; Kokyu is the seventh, before Taiko",
@@ -502,6 +667,17 @@ int main(void)
         CHECK("Kokyu: bowed, the note swells in (the first 60 ms 20 dB under the sustain, 60-300 ms within 6 dB of it)",
               c - a > 20.0 && c - b < 6.0 && c > -50.0);
         CHECK_NEAR("Kokyu: on the key's pitch (三 = A3)", tu_cents(tu_yin(buf + 44100, 8820, 44100.0), 220.0), 0.0, 25.0);
+        {   /* 1.0.7: the bow tremolo is gone (the owner's call); what swing is left is the ensemble's own beating */
+            double mn = 1e9, mx = 0.0;
+            int w = 2205, k;
+            for (k = 44100; k + w <= 88200; k += w) {
+                double r = rms_of(k, k + w);
+                mn = r < mn ? r : mn;
+                mx = r > mx ? r : mx;
+            }
+            printf("  Kokyu: level swing over 1-2 s (50 ms windows) %.1f dB\n", db((float)(mx / mn)));
+            CHECK("Kokyu: no tremolo (the 50 ms level swings under 3.5 dB over 1-2 s)", mx / mn < 1.585);
+        }
         fm_key(5, 0);
         run(0, 44032);
     }
@@ -745,6 +921,33 @@ int main(void)
     fm_note(FM_NOTE_ID, 0, 0.0f);
     fm_set(P_A4, 440);
     run(0, 8192);
+    {   /* MIDI in with velocity (1.0.7): a note's velocity reaches the pluck, as the trill's accents do; fm_note is 100 */
+        double l64, l100, l127;
+        fm_set(P_VOICE, koto_a());
+        fm_set(P_REVERB, 0);
+        fm_set(P_YOIN, 0);
+        run(0, 4096);
+        fm_note(FM_NOTE_ID, 1, -1500.0f);
+        run(0, 11008);
+        l100 = db(rms_of(0, 11008));
+        fm_note(FM_NOTE_ID, 0, 0.0f);
+        run(0, 44032);
+        fm_note_vel(FM_NOTE_ID, 1, -1500.0f, 64);
+        run(0, 11008);
+        l64 = db(rms_of(0, 11008));
+        fm_note(FM_NOTE_ID, 0, 0.0f);
+        run(0, 44032);
+        fm_note_vel(FM_NOTE_ID, 1, -1500.0f, 127);
+        run(0, 11008);
+        l127 = db(rms_of(0, 11008));
+        fm_note(FM_NOTE_ID, 0, 0.0f);
+        run(0, 44032);
+        printf("  MIDI in on Koto Pluck: velocity 64 %.1f dB, 100 %.1f dB, 127 %.1f dB\n", l64, l100, l127);
+        CHECK("MIDI in: a note at velocity 64 is 3 to 9 dB under one at 100", l100 - l64 > 3.0 && l100 - l64 < 9.0);
+        CHECK("MIDI in: a note at velocity 127 is louder than one at 100, by under 3 dB", l127 > l100 && l127 - l100 < 3.0);
+        fm_set(P_VOICE, 0);
+        run(0, 4096);
+    }
 
     /* the wood pair (1.0.4): 拍子木 Hyoshigi, two sticks, a crack with no tail whatever 余韻 says; 木魚 Mokugyo, the
      * wooden fish, a pitched tok that follows the keys. Both the key held and 余韻 full: percussion ends by itself */

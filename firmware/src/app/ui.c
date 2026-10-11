@@ -29,9 +29,10 @@ static const uint8_t VIEW_KNOB[NVIEWS][4] = {
 
 static const uint8_t WHITE_K[FM_NWHITE] = {0, 2, 4, 6, 7, 9, 11, 12, 14, 16, 18, 19, 21, 23, 24, 26};
 static const uint8_t BLACK_K[FM_NBLACK] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 25};
-/* ornament mode: what each black key does (ORN_N = nothing yet) */
-static const uint8_t BLACK_ORN[FM_NBLACK] = {ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_N,
-                                             ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_N, ORN_N};
+/* ornament mode: what each black key does. The four techniques come twice, one set per hand position; the fifth
+ * of each set and the eleventh are the koto's left hand (1.0.7): 押し手, 引き色, 後押し */
+static const uint8_t BLACK_ORN[FM_NBLACK] = {ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_OSHIDE,
+                                             ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_HIKIIRO, ORN_ATOOSHI};
 static const char *const DEG_NAME[5] = {"mi", "fa", "la", "ti", "do"};
 static const char *const NOTE_NAME[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
@@ -288,14 +289,14 @@ static void button(int b)                          /* on release, unless the pre
     }
 }
 
-/* MIDI in (USB and the TRS jack): notes play the voice, chromatic (M5 adds a scale mode) */
+/* MIDI in (USB and the TRS jack): notes play the voice, chromatic, with their velocity (1.0.7) */
 static void midi_in(void)
 {
     uint32_t pkt;
     while (plat_midi_in(&pkt)) {
         uint32_t st = (pkt >> 8) & 0xF0u, n = (pkt >> 16) & 0x7Fu, v = pkt >> 24;
         if (st == 0x90u && v)
-            fm_note(FM_NOTE_ID + (int)n, 1, 100.0f * ((float)n - 69.0f));
+            fm_note_vel(FM_NOTE_ID + (int)n, 1, 100.0f * ((float)n - 69.0f), (int)v);
         else if (st == 0x80u || (st == 0x90u && !v))
             fm_note(FM_NOTE_ID + (int)n, 0, 0.0f);
         else if (st == 0xB0u && (n == 123u || n == 120u))
@@ -415,9 +416,11 @@ static uint16_t mix(uint16_t a, uint16_t b, int t)   /* t 0..16: a -> b */
 static void draw_header(void)
 {
     int msg = plat_ms() < ui.msg_until;
+    int oroshi = proj.par[P_BLACK] && proj.par[P_TRILL_OROSHI];   /* 颪 set: the trill key rolls (shown in ornament mode) */
     uint32_t h = hash(hash(2166136261u, ui.view), (uint32_t)proj.par[P_VIB_ON] | (uint32_t)proj.par[P_TRILL_ON] << 1 |
                                                    (uint32_t)proj.par[P_MONO] << 2 | (uint32_t)proj.par[P_BLACK] << 3 |
-                                                   (uint32_t)ui.dirty << 4 | (uint32_t)msg << 5 | (uint32_t)fm_loop_state << 6);
+                                                   (uint32_t)ui.dirty << 4 | (uint32_t)msg << 5 | (uint32_t)fm_loop_state << 6 |
+                                                   (uint32_t)oroshi << 9);
     if (msg)
         h = hash(hash(h, (uint32_t)ui.msg[0][0] << 8 | ui.msg[0][1]), ui.msg_until);
     if (h == ui.sig[0])
@@ -431,8 +434,9 @@ static void draw_header(void)
         static const char *const TAG[4] = {"VIB", "TRILL", "MONO", "ORN"};
         static const char *const LTAG[LP_NSTATE] = {"", "ARM", "REC", "LOOP", "DUB", "STOP"};
         int on[4] = {proj.par[P_VIB_ON], proj.par[P_TRILL_ON], proj.par[P_MONO], proj.par[P_BLACK]}, i;
-        int32_t x = 10;
-        cv_text(x, 6, &FONT_B, ui.view == V_HOME ? "FuMi-1" : VIEW_NAME[ui.view], K_TEXT);
+        const char *title = ui.view == V_HOME ? "FuMi-1" : VIEW_NAME[ui.view];
+        int32_t x = 10, left = 10 + text_w(&FONT_B, title) + 8;   /* tags never run into the title: the rest are dropped */
+        cv_text(x, 6, &FONT_B, title, K_TEXT);
         x = 232;
         if (fm_loop_state != LP_IDLE) {            /* the looper, rightmost: red while it records */
             int rec = fm_loop_state == LP_REC || fm_loop_state == LP_DUB;
@@ -441,10 +445,18 @@ static void draw_header(void)
             cv_round(x, 6, w, 16, 6, rec ? K_KOTO : K_KOTO_T);
             cv_text(x + 5, 7, &FONT_XS, LTAG[fm_loop_state], rec ? K_WHITE : K_KOTO);
         }
+        if (oroshi) {                              /* 颪 beside the looper's tag: the trill ornament key starts slow */
+            int32_t w = text_w(&FONT_JP, FM_KANJI_OROSHI) + 8;
+            x -= w + 4;
+            cv_round(x, 5, w, 18, 6, K_KOTO_T);
+            cv_text(x + 4, 5, &FONT_JP, FM_KANJI_OROSHI, K_KOTO);
+        }
         for (i = 3; i >= 0; i--) {
             int32_t w = text_w(&FONT_XS, TAG[i]) + 10;
             if (!on[i])
                 continue;
+            if (x - w - 4 < left)
+                break;
             x -= w + 4;
             cv_round(x, 6, w, 16, 6, K_KOTO_T);
             cv_text(x + 5, 7, &FONT_XS, TAG[i], K_KOTO);

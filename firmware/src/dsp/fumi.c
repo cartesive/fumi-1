@@ -87,6 +87,12 @@ void fm_param_text(int p, int v, char *b)
     case P_BEND_UP: copy_s(BENDT[v], b, 11); return;
     case P_BLACK: copy_s(BLACKM[v], b, 11); return;
     case P_TRILL_OROSHI: copy_s(OROSHI[v], b, 11); return;
+    case P_TRILL_PAIR:                            /* shapes read as words (1.0.7); the bar beneath keeps the position */
+        copy_s(v >= 50 ? "Even" : v >= 46 ? "Loose" : v >= 38 ? "Paired" : "Tight", b, 11);
+        return;
+    case P_TRILL_TA:
+        copy_s(v >= 100 ? "Same" : v >= 85 ? "Softer" : v >= 60 ? "Light" : "Faint", b, 11);
+        return;
     default: break;
     }
     if ((p == P_FINE || p == P_OCTAVE || (p >= P_USER0 && p <= P_USER11)) && v > 0)
@@ -118,7 +124,11 @@ static void post(uint32_t c, int a, int b, float f)
 }
 void fm_set(int p, int v) { post(C_SET, p, v, 0.0f); }
 void fm_key(int key, int on) { post(C_KEY, key, on, 0.0f); }
-void fm_note(int id, int on, float cents) { post(C_NOTE, id, on, cents); }
+void fm_note(int id, int on, float cents) { post(C_NOTE, id, on ? 1 : 0, cents); }
+void fm_note_vel(int id, int on, float cents, int vel)   /* b: bit 0 on, bits 1.. the velocity (0 = as the accents say) */
+{
+    post(C_NOTE, id, on ? 1 | (vel < 1 ? 1 : vel > 127 ? 127 : vel) << 1 : 0, cents);
+}
 void fm_ornament(int orn, int on) { post(C_ORN, orn, on, 0.0f); }
 void fm_bend(int which, int down, int note_held) { post(C_BEND, which, down | note_held << 1, 0.0f); }
 void fm_panic(void) { post(C_PANIC, 0, 0, 0.0f); }
@@ -187,6 +197,8 @@ typedef struct {
     float yo_g, yo_m;                             /* 余韻: the release gain and its multiplier per sample */
     float g, dc, lvl;                             /* last block's gain (ramps), DC blocker, level for the lights */
     float trim;                                   /* the stroke's gain trim (the accent), into the ramped gain */
+    uint32_t age;                                 /* blocks since the pluck (the left hand's shapes, 1.0.7) */
+    uint8_t hiki, ato;                            /* plucked under 引き色 / 後押し: the dip, the push */
     uint8_t down, live, vel;
     uint8_t slot;                                 /* the patch it plays (ps) */
     uint32_t order;
@@ -205,11 +217,21 @@ static uint8_t orn[2][ORN_N];                     /* the ornaments held: [0] the
 static uint32_t ms_count;                         /* the engine's clock, ms (bend.c) */
 static float ms_acc;
 static float vib_ph, vib_inc, vib_depth, vib_cur[2];
+static float oshi_cur[2], k_oshi;                 /* 押し手: the group's notes' rise, easing to 200 cents while the key is held */
+#define OSHIDE_CENTS 200.0f
+#define HIKIIRO_CENTS 40.0f                       /* the dip just after the pluck, back by HIKIIRO_MS */
+#define HIKIIRO_MS 150.0f
+#define ATOOSHI_CENTS 100.0f                      /* the push, ATOOSHI_MS after the pluck, over ATOOSHI_RISE_MS */
+#define ATOOSHI_MS 200.0f
+#define ATOOSHI_RISE_MS 60.0f
 /* the trill, one per group: strokes in pairs, ka-ta; the next stroke's kind and when; oroshi's gap multiplier */
 typedef struct {
     float left;                                   /* samples to the next stroke */
     float mult, start;                            /* oroshi: the gap multiplier now, and at the start (1 = none) */
     uint8_t running, ta;                          /* a stroke clock runs; the next stroke is a ta */
+    int id;                                       /* the group's last stroke: its note, pitch and instrument, so a key whose */
+    float base, next_up;                          /* sound has ended by itself (a hyoshigi's crack) can be struck again (1.0.7) */
+    uint8_t slot;
 } trill_t;
 static trill_t tr[2];
 static float trill_period;
@@ -371,14 +393,19 @@ static void oroshi_start(int g)                   /* the ornament key: from abou
 }
 
 static void pluck_vel(int i, int id, float cents, float next_up, int fresh, int slot, int vel, float trim);
+static float hand_shape(const voice_t *v);
 /* (re)start voice i on pitch `cents` (from A4) for key id; fresh = from silence. A press (press = 1) is strong
  * while the trill is on (the first KA) or under the strong-pluck ornament, else normal; mono's return to the key
- * still held on a key-up (press = 0) is normal. Either way a running trill restarts its pair on the note. */
-static void pluck_on(int i, int id, float cents, float next_up, int fresh, int slot, int press)
+ * still held on a key-up (press = 0) is normal. A velocity given (MIDI in, 1.0.7) is the stroke's as it stands, no
+ * trim: the instrument's own velocity response decides. Either way a running trill restarts its pair on the note. */
+static void pluck_on(int i, int id, float cents, float next_up, int fresh, int slot, int press, int vel_in)
 {
     int g = group_of(id), vel;
     float trim;
-    if (orn[g][ORN_STRONG])
+    if (vel_in > 0) {
+        vel = vel_in > 127 ? 127 : vel_in;
+        trim = 1.0f;
+    } else if (orn[g][ORN_STRONG])
         accent(1, 1.0f, 0, &vel, &trim);
     else if (press && trill_on(g))
         accent(1, feel(), 0, &vel, &trim);
@@ -393,7 +420,7 @@ static void pluck_on(int i, int id, float cents, float next_up, int fresh, int s
     }
     pluck_vel(i, id, cents, next_up, fresh, slot, vel, trim);
 }
-static void pluck(int i, int id, float cents, float next_up, int fresh, int slot) { pluck_on(i, id, cents, next_up, fresh, slot, 1); }
+static void pluck(int i, int id, float cents, float next_up, int fresh, int slot) { pluck_on(i, id, cents, next_up, fresh, slot, 1, 0); }
 static void pluck_vel(int i, int id, float cents, float next_up, int fresh, int slot, int vel, float trim)
 {
     voice_t *v = &vc[i];
@@ -405,10 +432,13 @@ static void pluck_vel(int i, int id, float cents, float next_up, int fresh, int 
         v->dc = 0.0f;
         v->g = 0.0f;
     }
-    smooth_jump(&v->pitch, cents);                 /* a pluck is a new pitch at once (phase-continuous: no click) */
+    v->id = id;
+    v->age = 0;                                    /* the left hand's shapes start with the pluck, and the pitch lands */
+    v->hiki = orn[group_of(id)][ORN_HIKIIRO];      /* where they put it: 押し手 held is a whole tone up from the first ms */
+    v->ato = orn[group_of(id)][ORN_ATOOSHI];
+    smooth_jump(&v->pitch, cents + hand_shape(v)); /* a pluck is a new pitch at once (phase-continuous: no click) */
     v->pitch.k = k_fast;
     v->sliding = 0;
-    v->id = id;
     v->base = cents;
     v->next_up = next_up;
     v->yo_g = 1.0f;
@@ -419,6 +449,13 @@ static void pluck_vel(int i, int id, float cents, float next_up, int fresh, int 
     v->trim = trim;
     v->order = ++order_n;
     v->slot = (uint8_t)slot;
+    {
+        trill_t *t = &tr[group_of(id)];
+        t->id = id;
+        t->base = cents;
+        t->next_up = next_up;
+        t->slot = (uint8_t)slot;
+    }
     fm6_note_init(&v->n, ps[slot].v, mn, vel, fresh);
     fm6_lfo_key(&ps[slot].lfo);
     if (lp_key_of(id) >= 0)
@@ -449,6 +486,14 @@ static void slide_to(int i, int id, float cents, float next_up)
 
 /* key-up: 余韻 is the release. The FM6 envelope is not told (its own R4 would cut a long 余韻 short): the
  * note keeps decaying as it would under a held key and the 余韻 gain takes it away, 20 ms .. 8 s */
+static void midi_off(const voice_t *v)            /* the note-off for a key's voice: at the key-up, or when its sound
+                                                     ended by itself with the key still down (a hyoshigi's crack) */
+{
+    if (par[P_MIDI_OUT] && v->id < FM_NKEY) {
+        int m = (int)fm_floorf((v->base + 6900.0f) * 0.01f + 0.5f);
+        fm_midi_out(0x80, (uint32_t)(m < 0 ? 0 : m > 127 ? 127 : m), 0);
+    }
+}
 static void release(int i)
 {
     voice_t *v = &vc[i];
@@ -460,10 +505,7 @@ static void release(int i)
     if (par[P_YOIN] == 0)
         v->yo_g = 0.0f;
 #endif
-    if (par[P_MIDI_OUT] && v->id < FM_NKEY) {
-        int m = (int)fm_floorf((v->base + 6900.0f) * 0.01f + 0.5f);
-        fm_midi_out(0x80, (uint32_t)(m < 0 ? 0 : m > 127 ? 127 : m), 0);
-    }
+    midi_off(v);
 }
 
 static void held_push(int id)
@@ -497,12 +539,12 @@ static int legato_voice(void)
     return best;
 }
 
-static void note_on(int id, float cents, float next_up)
+static void note_on(int id, float cents, float next_up, int vel)   /* vel 0: as the accents say (the keys) */
 {
     int i = find_voice(id), lv;
     held_push(id);
     if (i >= 0) {                                  /* the same key again: re-excite its own voice */
-        pluck(i, id, cents, next_up, 0, 0);
+        pluck_on(i, id, cents, next_up, 0, 0, 1, vel);
         return;
     }
     lv = legato_voice();
@@ -510,7 +552,7 @@ static void note_on(int id, float cents, float next_up)
         if (par[P_SLIDE])
             slide_to(lv, id, cents, next_up);
         else
-            pluck(lv, id, cents, next_up, 0, 0);
+            pluck_on(lv, id, cents, next_up, 0, 0, 1, vel);
         return;
     }
     if (par[P_SLIDE] && lv >= 0) {                 /* SLIDE in 和音: the most recent voice slides, the rest ring */
@@ -519,9 +561,9 @@ static void note_on(int id, float cents, float next_up)
     }
     i = alloc_voice();
 #ifdef FM_NO_SMOOTH
-    pluck(i, id, cents, next_up, 1, 0);
+    pluck_on(i, id, cents, next_up, 1, 0, 1, vel);
 #else
-    pluck(i, id, cents, next_up, !vc[i].live, 0);
+    pluck_on(i, id, cents, next_up, !vc[i].live, 0, 1, vel);
 #endif
 }
 
@@ -542,7 +584,7 @@ static void note_off(int id)
         if (par[P_SLIDE])
             slide_to(lv, back, c, nu);
         else
-            pluck_on(lv, back, c, nu, 0, 0, 0);
+            pluck_on(lv, back, c, nu, 0, 0, 0, 0);
         return;
     }
     release(i);
@@ -599,7 +641,7 @@ typedef struct {
 } lp_ev_t;
 static lp_ev_t lp_ev[LP_NEV] FM_POOL;
 static uint32_t lp_n, lp_len, lp_pos, lp_next, lp_max, lp_keys_down, lp_other_down, lp_orn_on;
-#define LP_ROOM 33u                               /* a press is taken only with room for every release: 27 keys, 4 ornaments, 2 bends */
+#define LP_ROOM 36u                               /* a press is taken only with room for every release: 27 keys, 7 ornaments, 2 bends */
 static uint8_t lp_state, lp_layer, lp_click_on;
 #define LP_NOSLOT 0xFFu
 static uint8_t lp_lslot[256];                     /* the instrument of each layer: a slot of ps; LP_NOSLOT until its first event */
@@ -1013,6 +1055,7 @@ void fm_init(void)
     smooth_init(&level_sm, 8.0f, 0.0f, BLK_MS);
     level_cur = 0.0f;
     k_fast = 1.0f - fm_expf(-BLK_MS / 12.0f);
+    k_oshi = 1.0f - fm_expf(-BLK_MS / 30.0f);     /* 押し手 arrives in about 80 ms */
     for (i = 0; i < FM_NVOICE; i++) {
         vc[i].live = vc[i].down = 0;
         vc[i].id = -1;
@@ -1030,6 +1073,7 @@ void fm_init(void)
         fm_key_level[i] = 0.0f;
     for (i = 0; i < ORN_N; i++)
         orn[0][i] = orn[1][i] = 0;
+    oshi_cur[0] = oshi_cur[1] = 0.0f;
     nheld = lp_nheld = 0;
     for (i = 0; i < 2; i++) {
         tr[i].left = 0.0f;
@@ -1067,15 +1111,15 @@ static void drain(void)
                 lp_record(C_KEY, c.a, c.b);
                 if (c.b) {
                     float nu, cents = key_cents(c.a, &nu);
-                    note_on(c.a, cents, nu);
+                    note_on(c.a, cents, nu, 0);
                 } else {
                     note_off(c.a);
                 }
             }
             break;
         case C_NOTE:
-            if (c.b)
-                note_on(c.a, c.f, 100.0f);
+            if (c.b & 1)
+                note_on(c.a, c.f, 100.0f, c.b >> 1);
             else
                 note_off(c.a);
             break;
@@ -1124,40 +1168,66 @@ static float trill_gap(int g, int ta_next)
     return ta_next ? s * (1.0f + 0.4f * jit * frand()) : l * (1.0f + jit * frand());
 }
 
+static int trill_voice(int g, int id, int *fresh)   /* the voice the trill strikes: the key's own, or a new one when the
+                                                      sound ended by itself with the key still down (a hyoshigi between strokes) */
+{
+    int v = find_voice(id), key = g ? lp_key_of(id) : id;
+    float nu, cents;
+    *fresh = 0;
+    if (v >= 0)
+        return v;
+    if (key >= 0 && key < FM_NKEY) {
+        cents = key_cents(key, &nu);              /* a panel or loop key: its pitch now, through the tuning as it stands */
+    } else if (tr[g].id == id) {
+        cents = tr[g].base;                       /* a note by absolute pitch (MIDI): as it was last struck */
+        nu = tr[g].next_up;
+    } else {
+        return -1;
+    }
+    v = alloc_voice();
+    *fresh = !vc[v].live;
+    vc[v].base = cents;
+    vc[v].next_up = nu;
+    vc[v].slot = g ? tr[g].slot : 0;              /* the loop's last stroke's instrument; the hands play the live one */
+    return v;
+}
 static void trill_block(int g)                    /* every block: the group's trill clock */
 {
-    int id = trill_top(g), v;
+    int id = trill_top(g), v, fresh;
     if (!trill_on(g) || id < 0) {
-        tr[g].running = 0;
-        return;
-    }
-    v = find_voice(id);
-    if (v < 0) {
         tr[g].running = 0;
         return;
     }
     if (!tr[g].running) {                         /* switched on over a sounding note: the strong KA now */
         int vel;
         float trim;
+        v = trill_voice(g, id, &fresh);           /* the key down though its sound has ended: struck again all the same */
+        if (v < 0)
+            return;
         if (g == 0 && orn[0][ORN_TRILL])
             oroshi_start(g);
         else
             tr[g].mult = tr[g].start = 1.0f;
         accent(1, feel(), 0, &vel, &trim);
-        pluck_vel(v, id, vc[v].base, vc[v].next_up, 0, vc[v].slot, vel, trim);
+        pluck_vel(v, id, vc[v].base, vc[v].next_up, fresh, vc[v].slot, vel, trim);
         trill_restart(g);
         return;
     }
     tr[g].left -= (float)BLK;
     if (tr[g].left > 0.0f)
         return;
+    v = trill_voice(g, id, &fresh);
+    if (v < 0) {
+        tr[g].running = 0;
+        return;
+    }
     {
         int vel;
         float trim, q = feel();
         if (tr[g].start > 1.0f)
             q *= (tr[g].start - tr[g].mult) / (tr[g].start - 1.0f);
         accent(tr[g].ta ? 2 : 0, q, 1, &vel, &trim);
-        pluck_vel(v, id, vc[v].base, vc[v].next_up, 0, vc[v].slot, vel, trim);
+        pluck_vel(v, id, vc[v].base, vc[v].next_up, fresh, vc[v].slot, vel, trim);
         if (tr[g].mult > 1.0f) {                  /* oroshi: each gap shorter than the last by a constant ratio */
             static const float T[4] = {1.0f, 1.5f, 3.0f, 5.0f};
             float r = 1.0f - trill_period * (tr[g].start - 1.0f) / (T[par[P_TRILL_OROSHI] & 3] * FM_SR);
@@ -1169,6 +1239,19 @@ static void trill_block(int g)                    /* every block: the group's tr
         tr[g].ta = !tr[g].ta;
         tr[g].left += trill_gap(g, tr[g].ta);
     }
+}
+
+/* the left hand's shapes on a voice, cents: 押し手 for the whole group while its key is held; the voice's own
+ * 引き色 dip (from -HIKIIRO_CENTS at the pluck, gone by HIKIIRO_MS) and 後押し push (up ATOOSHI_CENTS from ATOOSHI_MS
+ * after the pluck, over ATOOSHI_RISE_MS); a re-pluck (the trill) starts them again */
+static float hand_shape(const voice_t *v)
+{
+    float ms = (float)v->age * BLK_MS, o = oshi_cur[group_of(v->id)];
+    if (v->hiki && ms < HIKIIRO_MS)
+        o -= HIKIIRO_CENTS * (1.0f - ms / HIKIIRO_MS);
+    if (v->ato && ms > ATOOSHI_MS)
+        o += ms >= ATOOSHI_MS + ATOOSHI_RISE_MS ? ATOOSHI_CENTS : ATOOSHI_CENTS * (ms - ATOOSHI_MS) / ATOOSHI_RISE_MS;
+    return o;
 }
 
 static void controls_block(void)
@@ -1189,6 +1272,8 @@ static void controls_block(void)
         vib_ph -= 1.0f;
     vib_cur[0] += (((par[P_VIB_ON] || orn[0][ORN_VIB]) ? vib_depth : 0.0f) - vib_cur[0]) * 0.03f;
     vib_cur[1] += ((orn[1][ORN_VIB] ? vib_depth : 0.0f) - vib_cur[1]) * 0.03f;
+    oshi_cur[0] += ((orn[0][ORN_OSHIDE] ? OSHIDE_CENTS : 0.0f) - oshi_cur[0]) * k_oshi;
+    oshi_cur[1] += ((orn[1][ORN_OSHIDE] ? OSHIDE_CENTS : 0.0f) - oshi_cur[1]) * k_oshi;
     trill_block(0);
     trill_block(1);
     {
@@ -1206,7 +1291,8 @@ static void controls_block(void)
         voice_t *v = &vc[i];
         if (!v->live)
             continue;
-        smooth_set(&v->pitch, v->base + (i == bend_voice ? b : 0.0f) + (i == lp_bend_voice ? lb : 0.0f));
+        smooth_set(&v->pitch, v->base + hand_shape(v) + (i == bend_voice ? b : 0.0f) + (i == lp_bend_voice ? lb : 0.0f));
+        v->age++;
     }
 }
 
@@ -1230,6 +1316,8 @@ static void render_voices(void)
         if (!fm6_note_compute(&v->n, p->v, bus, p->lfo_v, p->lfo_d, fm6_logfreq_cents(cents + 6900.0f), p->v[FP_ALG] & 31u,
                               p->v[FP_FB] & 7u, DT0, 0) || (!v->down && v->yo_g < 1e-4f)) {
             if (fm6_note_done(&v->n, p->v, p->v[FP_ALG] & 31u) || (!v->down && v->yo_g < 1e-4f)) {
+                if (v->down)
+                    midi_off(v);
                 v->live = 0;
                 v->g = 0.0f;
                 voice_level_for_lights(v, 0.0f);

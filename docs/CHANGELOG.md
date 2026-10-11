@@ -3,6 +3,33 @@
 Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 reports the identity
 (`python3 tools/fm1_install.py --info`).
 
+## 1.0.7 (12 Oct 2026) — `FM-1_7010007`
+
+- **Fixed: the trill on the hyōshigi.** The trill clock gave up when the held key's voice was gone, and a
+  hyōshigi crack is over in under 200 ms: at the trill rate it managed two strokes, with oroshi one, the
+  mokugyo one; the slow trill rates gave a single clap. The held key is now struck again whatever became of
+  its last sound, on a fresh voice. Measured: 20 strokes in 3 s plain, 6 on oroshi Long, as the taiko.
+- **The koto's left hand on the three empty ornament keys** (SEQ on). Black 5, 押し手 oshide: the sounding
+  notes rise a whole tone over about 80 ms while the key is held, and fall back on release. Black 10, 引き色
+  hikiiro: while held, each new note dips 40 cents just after the pluck and comes back over 150 ms. Black
+  11, 後押し atooshi: while held, each new note is pushed up a semitone 200 ms after it sounds. They ride the
+  bend's pitch glide (no click), a trill stroke starts them again, and the loop records them like the others.
+- **MIDI in carries velocity.** A note from a MIDI keyboard plays at its own velocity, through the
+  instrument's velocity response (FuMi's own six respond; the community patches as their authors wrote
+  them): on Koto Pluck, velocity 64 is 5 dB under 100. Before, every MIDI note played at 100.
+- **The screen.** In ornament mode the header shows 颪 while oroshi is set, so the player knows the trill
+  key rolls. On the Trill page, pair gap and ta level read as words, Even / Loose / Paired / Tight and
+  Same / Softer / Light / Faint, the bar beneath keeping the exact position. Header tags never run into
+  the page title: those that would not fit are dropped.
+- **Kokyū 胡弓 without the bow tremolo** (the owner's call): the slowed attack stays, the amplitude LFO is
+  gone, and the level swing over a held note falls from 4.7 dB to 2.9 dB (what is left is the ensemble
+  patch's own beating).
+- **Fixed: a MIDI note-off that never came.** A key whose sound ends by itself with the key still down (the
+  hyōshigi, the mokugyo) sent its note-on and no note-off, so a synth on MIDI out held the note; the note-off
+  now goes out when the sound ends. Found in review, with four smaller faults in the new code (a swoop on
+  notes plucked under 押し手, the trill losing the held key after another was released or after a retune).
+- The setup format is unchanged; 1.0.6 setups load as they are.
+
 ## 1.0.6 (11 Oct 2026) — `FM-1_7010006`
 
 - **A trill that sounds played.** Strokes come in pairs, *ka-ta*, the short gap 42 % of the pair; the first

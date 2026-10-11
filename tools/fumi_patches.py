@@ -122,14 +122,14 @@ PATCHES = [
     # 12, which FuMi's engine does not read), so every ratio is halved to put it on the key's pitch. Measured in the
     # session: the first 60 ms about 30 dB under the sustain, full by 300 ms. Winds, then the bowed voice, then
     # percussion, as on the ST-50.
-    ('Kokyu', '胡弓', voice('Kokyu', 2, [  # was Viola.Ens            # patches.fm: Tim Garrett, TX7-80B.SYX; attack slowed, tremolo added
-        op(r=(34, 22, 18, 45), l=(97, 97, 86, 0), ol=89, fc=2, rs=1, bp=0, ams=3),
+    ('Kokyu', '胡弓', voice('Kokyu', 2, [  # was Viola.Ens            # patches.fm: Tim Garrett, TX7-80B.SYX; attack slowed (the tremolo of 1.0.6 removed in 1.0.7)
+        op(r=(34, 22, 18, 45), l=(97, 97, 86, 0), ol=89, fc=2, rs=1, bp=0),
         op(r=(60, 17, 13, 37), l=(99, 98, 98, 0), ol=76, fc=1, det=9, rs=1, ld=2, rd=2, lc=3),
-        op(r=(42, 18, 17, 56), l=(99, 90, 85, 0), ol=99, fc=1, kvs=4, rs=3, bp=0, ams=3),
+        op(r=(42, 18, 17, 56), l=(99, 90, 85, 0), ol=99, fc=1, kvs=4, rs=3, bp=0),
         op(r=(55, 26, 0, 45), l=(99, 98, 90, 0), ol=86, fc=1, kvs=3, rs=3, bp=46, ld=4, rd=13, lc=3),
-        op(r=(70, 46, 55, 36), l=(99, 90, 83, 0), ol=74, fc=4, det=8, kvs=3, ams=1, rs=2, bp=42, ld=1, rd=15, lc=3),
+        op(r=(70, 46, 55, 36), l=(99, 90, 83, 0), ol=74, fc=4, det=8, kvs=3, rs=2, bp=42, ld=1, rd=15, lc=3),
         op(r=(31, 42, 50, 51), l=(99, 99, 99, 0), ol=36, fc=7, ff=17, det=12, mode=1, kvs=1, bp=46, ld=13),
-    ], fb=7, oks=0, pr=(82, 94, 0, 0), pl=(48, 51, 50, 50), lfs=40, lfd=25, lpmd=0, lamd=30, lks=0, lfw=4, lpms=1, trnsp=12)),
+    ], fb=7, oks=0, pr=(82, 94, 0, 0), pl=(48, 51, 50, 50), lfs=40, lfd=25, lpmd=0, lamd=0, lks=0, lfw=4, lpms=1, trnsp=12)),
     ('Taiko', '太鼓', voice('Taiko', 17, [                 # patches.fm: Tim Garrett, TX7-26B.SYX, renamed from 'Timpani.2'
         op(r=(87, 37, 98, 33), l=(99, 0, 0, 0), ol=99, fc=0, kvs=2, rs=3),
         op(r=(87, 76, 27, 23), l=(99, 72, 0, 0), ol=57, fc=0, kvs=1, rs=2, bp=41),

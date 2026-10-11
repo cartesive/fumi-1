@@ -88,7 +88,7 @@ FoMni do, and the installer can put M-VAVE's own firmware back. Installing is at
 notes on the install page first. Your FM-1 should be on M-VAVE's V15 before any custom firmware. FuMi-1 is
 quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div>
 <nav class="ways" aria-label="Get FuMi-1">
-  <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0; no FM-1 needed.</span></a>
+  <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0 and −; no FM-1 needed.</span></a>
   <a href="install/"><strong>Install</strong><span>From Chrome or Edge, with the FM-1 connected by USB. Nothing to install on the computer.</span></a>
   <a href="firmware/__PKG__"><strong>Download __PKG__</strong><span>For the command-line installer: <code>python3 tools/fm1_install.py __PKG__</code></span></a>
   <a href="bench/"><strong>The audition bench</strong><span>The voicing tool: the engine with a patch editor, DX7 .syx import, blind A/B, morphs, notes and reference clips, all in the browser.</span></a>
@@ -111,7 +111,7 @@ quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div
 <tr><td>ENV</td><td>The Loop page: BPM, length in beats, click.</td></tr>
 <tr><td>SAVE</td><td>Saves. FuMi-1 also saves by itself a few seconds after a change, once it's quiet.</td></tr>
 </table>
-<p>MIDI comes in over USB (chromatic) and goes out over USB with the strokes' velocities. The patches are
+<p>MIDI comes in over USB (chromatic, each note at its velocity) and goes out over USB with the strokes' velocities. The patches are
 Yamaha DX7-format voices; the built-ins are community patches and FuMi's own, with no factory ROM voice
 among them.</p>
 
@@ -126,7 +126,7 @@ community DX7 banks on patches.fm, six are FuMi's own. FuMi's own six respond to
 <tr><td>4 Shakuhachi 尺八</td><td>PAN FL T A, a community patch.</td></tr>
 <tr><td>5 Dragon Flt 龍笛</td><td>ALTO FLUTE, a community patch: the ryūteki of gagaku.</td></tr>
 <tr><td>6 Bamboo Flt 篠笛</td><td>Bamboo Flt, a community patch: the shinobue.</td></tr>
-<tr><td>7 Kokyu 胡弓</td><td>After Viola.Ens by Tim Garrett, the attack slowed and a bow tremolo added: the bowed string, one of the ST-50's own voices.</td></tr>
+<tr><td>7 Kokyu 胡弓</td><td>The kokyū, the bowed string, one of the ST-50's own voices: after Viola.Ens by Tim Garrett, the attack slowed so the note swells in.</td></tr>
 <tr><td>8 Taiko 太鼓</td><td>Timpani.2 by Tim Garrett.</td></tr>
 <tr><td>9 Hyoshigi 拍子木</td><td>FuMi's own: two hardwood sticks struck together, a dry crack the same on every key. The trill rolls them.</td></tr>
 <tr><td>10 Mokugyo 木魚</td><td>FuMi's own: the wooden fish, a round pitched tok.</td></tr>
@@ -157,13 +157,17 @@ logic on the FM-1's panel.</p>
 
 <h2>The black keys as ornaments</h2>
 <p>Press SEQ and the black keys stop being the upper row and become techniques on the note that sounds.
-They are momentary: held, they act; released, they stop. The same four come twice, one set per hand position.</p>
+They are momentary: held, they act; released, they stop. The first four come twice, one set per hand position;
+the fifth of each set and the eleventh are the koto's left hand, the techniques a player presses into the
+strings behind the bridge.</p>
 <table>
 <tr><td>Black 1 and 6</td><td>Vibrato while held.</td></tr>
-<tr><td>Black 2 and 7</td><td>Trill while held: the held note re-plucked in pairs, the first stroke the hardest. With oroshi set on the Trill page, it starts slow and speeds up (颪, the drum roll of the theatre); press the key again to start from slow again.</td></tr>
+<tr><td>Black 2 and 7</td><td>Trill while held: the held note re-plucked in pairs, the first stroke the hardest. With oroshi set on the Trill page, it starts slow and speeds up (颪, the drum roll of the theatre; the header shows 颪 while it is set); press the key again to start from slow again.</td></tr>
 <tr><td>Black 3 and 8</td><td>Damp: every note let go at once, whatever 余韻 says.</td></tr>
 <tr><td>Black 4 and 9</td><td>Strong pluck: the next notes struck hard.</td></tr>
-<tr><td>Black 5, 10, 11</td><td>Nothing yet.</td></tr>
+<tr><td>Black 5</td><td>押し手 oshide: the sounding notes rise a whole tone over about 80 ms while the key is held, and fall back when it is released.</td></tr>
+<tr><td>Black 10</td><td>引き色 hikiiro: while held, each new note dips 40 cents just after the pluck and comes back over 150 ms.</td></tr>
+<tr><td>Black 11</td><td>後押し atooshi: while held, each new note is pushed up a semitone 200 ms after it sounds.</td></tr>
 </table>
 <p>Ornaments recorded in a loop act on the loop's notes; your own ornament keys act on what your hands play.</p>
 
@@ -174,7 +178,8 @@ a little jitter mostly on the long gap. The first stroke is the hardest, each <e
 your hand. Trill rate on HOME sets the speed; Trill feel (hold GLO) goes from 0, the ST-50's even machine,
 to 100, the full pairs and accents. The Trill pages keep the defaults behind the feel knob: pair gap, ta
 level, first stroke, jitter, and oroshi for the ornament key: None, Short, Medium or Long, the time the trill
-takes from slow to full speed. The ARP button's trill stays plain whatever the setting.</p>
+takes from slow to full speed. Pair gap and ta level read as words, Even to Tight and Same to Faint, the bar
+beneath keeping the exact position. The ARP button's trill stays plain whatever the setting.</p>
 
 <h2>The looper</h2>
 <p>REC arms; the first key you play starts the loop; REC again closes it where you are and it plays (or it
