@@ -3,7 +3,8 @@
 # FuMi-1 host tests: the platform guard, the maths, the platform pieces kept from Felucca / X0X / FoMni,
 # the pitch core, the FM6 core, the instrument, the click regression test (and its proof), the no-double
 # check, flash storage, the update path against the package, the simulator scenarios (tests/scenarios/*.fumi:
-# screenshots and audio in build/scenarios/), the browser build, and the Python tools' self-tests.
+# screenshots and audio in build/scenarios/), the host's wavgain, the SoundFont tools, the browser build, and the
+# Python tools' self-tests.
 #   tests/run_tests.sh
 set -u
 cd "$(dirname "$0")/.."
@@ -59,6 +60,8 @@ else
     echo "  skip update-path tests (no build/fumi.fwsc: run ./build.sh)"
 fi
 run host-build sh host/build_host.sh
+run wavgain $PY tests/host/wavgain_test.py
+run sf-tools $PY tests/host/sf_test.py
 if command -v emcc >/dev/null 2>&1; then
     run emu sh -c "sh web/emu/build.sh >/dev/null && node tests/host/emu_test.mjs build/emu/fumi.wasm"
     run bench node tests/host/bench_test.mjs build/emu/fumi.wasm

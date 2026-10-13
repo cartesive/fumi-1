@@ -91,6 +91,7 @@ quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div
   <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0 and −; no FM-1 needed.</span></a>
   <a href="install/"><strong>Install</strong><span>From Chrome or Edge, with the FM-1 connected by USB. Nothing to install on the computer.</span></a>
   <a href="firmware/__PKG__"><strong>Download __PKG__</strong><span>For the command-line installer: <code>python3 tools/fm1_install.py __PKG__</code></span></a>
+  <a href="__REPO__/releases/download/fumi-__VERSION__/FuMi-__VERSION__.sf2"><strong>The SoundFont, FuMi-__VERSION__.sf2</strong><span>Every instrument as samples for a DAW or any SoundFont player: white keys F3–G5, the Suiko tuning in the sound, dry, CC BY 4.0. 70 MB, from the release; the read-me is docs/soundfont.md in the source.</span></a>
   <a href="bench/"><strong>The audition bench</strong><span>The voicing tool: the engine with a patch editor, DX7 .syx import, blind A/B, morphs, notes and reference clips, all in the browser.</span></a>
   <a href="__REPO__"><strong>Source</strong><span>GitHub, GPL-3.0. Built on FoMni and Felucca; the FM engine is Dexed's msfa.</span></a>
 </nav>

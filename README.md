@@ -230,6 +230,14 @@ FuMi's own six respond to velocity (1.0.6), for the trill's accents and for MIDI
 No Yamaha factory ROM voice is among them (a ROM2B pick was declined). The kanji come from Noto Sans CJK
 (SIL OFL 1.1) through `tools/gen_kanji.py`, which keeps only the characters these names use.
 
+## The SoundFont
+
+Every instrument as a sample set, for a DAW or any SoundFont player: `FuMi-X.Y.Z.sf2` sits on each
+[release](https://github.com/cartesive/fumi-1/releases) beside the firmware, rendered key by key through
+FuMi's own engine from that version. One preset per instrument in the PRESETS order; the sixteen scale notes
+on the white keys F3–G5 at 1本, black keys silent, the Suiko tuning in the samples so transposing keeps it;
+dry; CC BY 4.0. What it keeps and what stays on the FM-1, and how it is made: [docs/soundfont.md](docs/soundfont.md).
+
 ## The audition bench
 
 Voicing happens in the browser, on FuMi's real engine (`web/bench/`, see `docs/research/16-audition-bench.md`):
@@ -251,6 +259,7 @@ to put into `bench/sessions/`.
 - `tools/koto_search.c`: a search over the engine's settings against the ST-50 koto measurements (how KOTO A and B were found).
 - `tools/gen_fm6_tables.py`: the FM6 core's tables.
 - `tools/guard_platform.sh`: fails if any protected platform file differs from upstream FoMni.
+- `tools/sf_render.py`, `tools/sf_bank.py`, `tools/sf_check.py`: the SoundFont (render every instrument through the host, build the bank, check it).
 
 ## Where to talk
 

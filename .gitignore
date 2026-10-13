@@ -2,6 +2,7 @@ build/
 refs/*
 !refs/README.md
 *.fwsc
+*.sf2
 __pycache__/
 .DS_Store
 .superpowers/

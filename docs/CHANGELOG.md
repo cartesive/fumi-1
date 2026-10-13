@@ -29,6 +29,10 @@ Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 re
   now goes out when the sound ends. Found in review, with four smaller faults in the new code (a swoop on
   notes plucked under 押し手, the trill losing the held key after another was released or after a retune).
 - The setup format is unchanged; 1.0.6 setups load as they are.
+- **13 Oct 2026: `FuMi-1.0.7.sf2` on the release**, the fourteen instruments as a SoundFont rendered from this
+  version (the owner's design, `docs/soundfont.md`): white keys F3–G5 at 1本, the Suiko tuning in the
+  samples, dry, CC BY 4.0. Made by `tools/sf_render.py`, `sf_bank.py`, `sf_check.py`; the host simulator
+  gained `wavgain` for it. The firmware is unchanged.
 
 ## 1.0.6 (11 Oct 2026) — `FM-1_7010006`
 

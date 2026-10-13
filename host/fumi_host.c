@@ -15,6 +15,7 @@
  *   master N                     MASTER pot 0..4096
  *   midi B0 B1 B2                incoming USB MIDI message (hex bytes)
  *   wav FILE | wavstop           start / stop recording the output
+ *   wavgain G                    multiply the recording by G (clipped at full scale): FuMi's output is quiet (-21 dB)
  *   peakreset                    restart the output peak (expect peak_db_min / peak_db_max)
  *   shot FILE.png                save the screen
  *   snap NAME                    keep a copy of the screen (expect screen NAME: the screen is the same again)
@@ -240,7 +241,12 @@ static int snap_find(const char *name)
 
 static FILE *wav;
 static uint32_t wav_frames;
-static float peak_out;
+static float peak_out, wav_gain = 1.0f;
+static int16_t wav_s16(float x)
+{
+    x *= wav_gain * 32767.0f;
+    return (int16_t)(x > 32767.0f ? 32767.0f : x < -32767.0f ? -32767.0f : x);
+}
 static void wav_open(const char *path)
 {
     static const uint8_t h[44] = {0};
@@ -317,8 +323,8 @@ static void run_ms(uint32_t ms)
                     peak_out = fabsf(l);
                 if (fabsf(r) > peak_out)
                     peak_out = fabsf(r);
-                s[0] = (int16_t)(l * 32767.0f);
-                s[1] = (int16_t)(r * 32767.0f);
+                s[0] = wav_s16(l);
+                s[1] = wav_s16(r);
                 if (wav) {
                     fwrite(s, 2, 2, wav);
                     wav_frames++;
@@ -520,6 +526,8 @@ int main(int argc, char **argv)
             wav_open(out);
         } else if (!strcmp(cmd, "wavstop"))
             wav_close();
+        else if (!strcmp(cmd, "wavgain"))
+            wav_gain = (float)atof(a);
         else if (!strcmp(cmd, "peakreset"))
             peak_out = 0.0f;
         else if (!strcmp(cmd, "shot")) {
