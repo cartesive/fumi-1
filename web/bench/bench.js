@@ -380,24 +380,32 @@ function autoAB() {                                         // KOTO and HARP 2, 
 
 // ---------------------------------------------------------------- keys, bend, ornaments
 const keyEls = [];
-function buildKeys() {
-  const box = $("keys");
+function buildKeys() {                                    // the ST-50's two rows of round keys (1.0.8): sixteen below with the
+  const box = $("keys");                                   // panel's names under them, eleven above sitting between them
   const W = 16, pitch = 100 / W;
+  const LABEL = ["水", "", "乙", "一", "二", "三", "三′", "五", "六", "七", "八", "", "", "", "", ""];
+  const TAN = [2, 3, 5, 7, 8];                             // ラ乙 シ一 ミ三 ラ五 シ六: the panel's tan caps
   for (let w = 0; w < W; w++) {
     const d = document.createElement("div");
-    d.className = "key white" + (w % 5 === 0 ? " tonic" : "");
-    Object.assign(d.style, { left: `${w * pitch + 0.3}%`, width: `${pitch - 0.6}%`, top: "40%", height: "58%" });
-    d.textContent = ["mi", "fa", "la", "ti", "do"][w % 5] + (w % 5 === 0 ? ` ${["水", "", "三", "八", "·"][Math.min(4, w / 5 | 0)] || ""}` : "");
+    d.className = "key white" + (TAN.includes(w) ? " tan" : "");
+    Object.assign(d.style, { left: `${w * pitch + pitch * 0.5}%`, width: `${pitch * 0.8}%`, top: "34px" });
     d.dataset.key = w;
     box.appendChild(d);
     keyEls[w] = d;
+    if (LABEL[w]) {
+      const l = document.createElement("div");
+      l.className = "keylabel" + (w === 5 ? " ref" : "");
+      l.style.left = `${w * pitch + pitch * 0.5}%`;
+      l.textContent = LABEL[w];
+      box.appendChild(l);
+    }
   }
   const after = [0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14];
   after.forEach((a, b) => {
     const d = document.createElement("div");
     d.className = "key black";
-    Object.assign(d.style, { left: `${(a + 1) * pitch - pitch * 0.3}%`, width: `${pitch * 0.6}%`, top: "2%", height: "36%" });
-    d.textContent = ["fa#", "sol", "tib", "do#", "re"][b % 5];
+    Object.assign(d.style, { left: `${(a + 1) * pitch}%`, width: `${pitch * 0.8}%`, top: "0" });
+    d.title = ["fa#", "sol", "tib", "do#", "re"][b % 5];
     d.dataset.key = 16 + b;
     box.appendChild(d);
     keyEls[16 + b] = d;
@@ -410,7 +418,7 @@ function buildKeys() {
   box.addEventListener("pointermove", (e) => {               // a glissando: the finger moves across the whites
     const src = "p" + e.pointerId;
     const cur = [...held].find((id) => String(id).endsWith(src));
-    if (!cur) return;
+    if (!cur || +String(cur).split(":")[0] >= 16) return;        // the upper row does not slide onto the whites beneath
     for (let w = 0; w < 16; w++) {
       const r = keyEls[w].getBoundingClientRect();
       if (e.clientX >= r.left && e.clientX < r.right) {

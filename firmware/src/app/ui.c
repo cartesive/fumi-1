@@ -33,7 +33,6 @@ static const uint8_t BLACK_K[FM_NBLACK] = {1, 3, 5, 8, 10, 13, 15, 17, 20, 22, 2
  * of each set and the eleventh are the koto's left hand (1.0.7): 押し手, 引き色, 後押し */
 static const uint8_t BLACK_ORN[FM_NBLACK] = {ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_OSHIDE,
                                              ORN_VIB, ORN_TRILL, ORN_DAMP, ORN_STRONG, ORN_HIKIIRO, ORN_ATOOSHI};
-static const char *const DEG_NAME[5] = {"mi", "fa", "la", "ti", "do"};
 static const char *const NOTE_NAME[12] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
 
 /* the screen's colours: paper, ink, and one warm colour for what sounds */
@@ -467,16 +466,39 @@ static void draw_header(void)
     cv_blit(0, 0);
 }
 
-static void draw_keys(int32_t y0, int32_t h)
-{
+#define K_TAN RGB(222, 186, 138)                  /* the panel's tan caps on mi, la and ti of the main register */
+static const uint8_t BLACK_GAP[FM_NBLACK] = {0, 1, 2, 4, 5, 7, 8, 9, 11, 12, 14};   /* upper key j sits over the gap after white key BLACK_GAP[j] */
+static const uint8_t TAN_CAP[FM_NWHITE] = {0, 0, 1, 1, 0, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0};   /* ラ乙 シ一 ミ三 ラ五 シ六 (docs/research/10) */
+
+static void draw_keys(int32_t y_upper, int32_t y_lower)
+{   /* the ST-50's two rows of round keys (1.0.8): sixteen below, eleven above sitting between them; a key lights
+     * with its voice; the panel's tan caps on the frame notes of the main register */
     int k;
+    for (k = 0; k < FM_NBLACK; k++) {
+        int t = (int)(fm_key_level[FM_NWHITE + k] * 16.0f + 0.5f), x = 13 + BLACK_GAP[k] * 14;
+        cv_round(x - 1, y_upper - 1, 14, 14, 6, K_LINE);
+        cv_round(x, y_upper, 12, 12, 6, mix(K_PANEL, K_KOTO, t > 16 ? 16 : t));
+    }
     for (k = 0; k < FM_NWHITE; k++) {
-        float lv = fm_key_level[k];
-        int t = (int)(lv * 16.0f + 0.5f), x = 6 + k * 14, tonic = (k % 5) == 0;
-        uint16_t c = mix(tonic ? K_LINE : K_PANEL, K_KOTO, t > 16 ? 16 : t);
-        cv_round(x, y0, 12, h, 4, c);
-        if (tonic)
-            cv_round(x + 4, y0 + h - 7, 4, 4, 2, t > 2 ? K_WHITE : K_TONIC);
+        int t = (int)(fm_key_level[k] * 16.0f + 0.5f), x = 6 + k * 14;
+        cv_round(x - 1, y_lower - 1, 14, 14, 6, K_LINE);
+        cv_round(x, y_lower, 12, 12, 6, mix(TAN_CAP[k] ? K_TAN : K_WHITE, K_KOTO, t > 16 ? 16 : t));
+    }
+}
+
+static void draw_voice_slider(int32_t y)
+{   /* the 音色 strip (1.0.8): a notch per instrument in PRESETS order, a wider gap where the family changes, the one
+     * playing filled; the name in large type above says which */
+    int n = fm_patch_count(), i;
+    int32_t x = 12;
+    for (i = 0; i < n; i++) {
+        if (i && fm_patch_family(i) != fm_patch_family(i - 1))
+            x += 5;
+        if (i == proj.par[P_VOICE] && !fm_patch_custom)
+            cv_round(x - 1, y - 1, 5, 9, 2, K_KOTO);
+        else
+            cv_rect(x, y, 3, 7, K_LINE);
+        x += 9;
     }
 }
 
@@ -491,7 +513,7 @@ static void draw_main(void)
     char t[16];
     uint32_t h = hash(2166136261u, ui.view), s;
     int i;
-    for (s = 0; s < FM_NWHITE; s++)
+    for (s = 0; s < FM_NKEY; s++)
         h = hash(h, (uint32_t)(fm_key_level[s] * 24.0f));
     uint32_t lp_state = fm_loop_state, lp_len = fm_loop_len, lp_pos = fm_loop_pos, lp_q;   /* one read each */
     lp_q = lp_state == LP_REC || lp_state == LP_ARMED ? lp_pos * 54u / loop_max_blocks() : lp_len ? lp_pos * 54u / lp_len : 0u;
@@ -543,21 +565,25 @@ static void draw_main(void)
         }
     }
     {   /* the instrument, large: its name at the left in the biggest face that fits, its kanji at the right
-         * (Suiko-style), both centred on the band y 38..90; a patch sent from outside has no kanji */
+         * (Suiko-style), both centred on the band y 34..82; a name of four characters or more takes the smaller
+         * face (1.0.8: クラリネット); a patch sent from outside has no kanji */
         const char *name = (const char *)fm_patch_label, *ja = fm_patch_custom ? "" : FM_PATCH_JA_LCD[proj.par[P_VOICE]];
-        int32_t jw = *ja ? text_w(&FONT_JPL, ja) : 0, room = 240 - 24 - (jw ? jw + 10 : 0);
+        const felucca_font_t *jf = ja[0] && ja[1] && ja[2] && ja[3] ? &FONT_JPM : &FONT_JPL;
+        int32_t jw = *ja ? text_w(jf, ja) : 0, room = 240 - 24 - (jw ? jw + 10 : 0);
         const felucca_font_t *f = text_w(&FONT_L, name) <= room ? &FONT_L : text_w(&FONT_M, name) <= room ? &FONT_M : &FONT_B;
-        cv_text(12, 64 - f->h / 2, f, name, fm_patch_custom ? K_KOTO : K_TEXT);
+        cv_text(12, 58 - f->h / 2, f, name, fm_patch_custom ? K_KOTO : K_TEXT);
         if (jw)
-            cv_text(240 - 12 - jw, 64 - FONT_JPL.h / 2, &FONT_JPL, ja, K_TEXT);
+            cv_text(240 - 12 - jw, 58 - jf->h / 2, jf, ja, K_TEXT);
     }
-    draw_keys(98, 22);
-    for (i = 0; i < FM_NWHITE; i++)              /* the degree under each key, the tonics' row marked */
-        text_c(12 + i * 14, 124, &FONT_XS, DEG_NAME[i % 5], (i % 5) ? K_DIM : K_TEXT);
+    draw_keys(86, 100);
+    for (i = 0; i < FM_NWHITE; i++)              /* the panel's names under the lower keys: 水 乙 一 二 三 三′ 五 六 七 八, 三 the reference */
+        if (FM_KANJI_KEY_LABEL[i][0])
+            text_c(12 + i * 14, 114, &FONT_JPS, FM_KANJI_KEY_LABEL[i], i == 5 ? K_TEXT : K_DIM);
+    draw_voice_slider(131);
     if (lp_state != LP_IDLE) {                   /* the loop: where it is in its length (recording: in the ruler's) */
         int rec = lp_state == LP_REC || lp_state == LP_DUB;
-        cv_round(12, 138, 216, 4, 2, K_LINE);
-        cv_round(12, 138, (int32_t)(lp_q * 4u) + 4, 4, 2, rec ? K_KOTO : lp_state == LP_STOP ? K_DIM : K_TONIC);
+        cv_round(12, 141, 216, 3, 1, K_LINE);
+        cv_round(12, 141, (int32_t)(lp_q * 4u) + 4, 3, 1, rec ? K_KOTO : lp_state == LP_STOP ? K_DIM : K_TONIC);
     }
     cv_blit(0, MAIN_Y);
 }

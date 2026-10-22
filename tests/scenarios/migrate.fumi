@@ -1,20 +1,35 @@
-# a setup saved by 1.0.4 / 1.0.5 (format 2) loads in 1.0.6: the instrument keeps its name although Kokyu was put
-# before Taiko (Bamboo Flt stays 5, Taiko 6 becomes 7), Trill feel takes its new default, the trill's defaults appear
+# a setup saved by 1.0.4 / 1.0.5 (format 2) loads: the instrument keeps its name through both renumberings (1.0.6 put
+# Kokyu before Taiko; 1.0.8 grouped the families: Bamboo Flt 5 is now 11, Taiko 6 is now 18), Trill feel takes its new
+# default, the trill's defaults appear
 store_v2 5
 reboot
 wait 100
-expect par7 5
+expect par7 11
 store_v2 6
 reboot
 wait 100
-expect par7 7
+expect par7 18
 expect par15 100
 expect par44 42
 expect par48 0
-# what 1.0.6 saves loads as it is
+# what this version saves loads as it is
 spin PRESET -1
 tap SAVE
 wait 50
 reboot
 wait 100
-expect par7 6
+expect par7 17
+# a setup saved by 1.0.6 / 1.0.7 (format 3) loads in 1.0.8: the instrument keeps its name although the twenty-one
+# are now in the strip's families (Taiko 7 becomes 18, Koto Pluck 10 becomes 2, Koto 0 stays 0)
+store_v3 7
+reboot
+wait 100
+expect par7 18
+store_v3 10
+reboot
+wait 100
+expect par7 2
+store_v3 0
+reboot
+wait 100
+expect par7 0

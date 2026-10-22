@@ -81,6 +81,7 @@ void fm_patch_get(uint8_t *packed128);           /* main loop: the patch the ren
 int fm_patch_count(void);                        /* FuMi's own patches (P_VOICE) */
 const char *fm_patch_name(int i);
 const char *fm_patch_ja(int i);                   /* its Japanese name, UTF-8 (the screen uses fumi_kanji.h) */
+int fm_patch_family(int i);                      /* its family on the ST-50 strip: 0 kotos, 1 bells, 2 winds, 3 sustained, 4 percussion (1.0.8) */
 const uint8_t *fm_patch_builtin(int i);          /* its packed record */
 float fm_key_cents(int key);                     /* main loop: the pitch a panel key plays now, cents from A4 */
 

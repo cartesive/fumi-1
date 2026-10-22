@@ -9,8 +9,10 @@ firmware package. It is not in the repository (70 MB); the tools that make it ar
 Any SoundFont player takes it: a DAW's own sampler where it reads `.sf2` (Logic's Sampler / EXS24, Ableton
 Live's Simpler and Sampler, Reaper's ReaSamplOmatic via a SoundFont plugin, FL Studio's Fruity SoundFont
 Player, Bitwig's sampler), a free plugin (sfizz, Sforzando with its SoundFont import, FluidSynth, Polyphone to
-look inside), or a phone app. Pick a **program** (preset): the fourteen are in the FM-1's PRESETS order, bank
-0, programs 0–13 (some players count from 1):
+look inside), or a phone app. Pick a **program** (preset): the instruments are in the PRESETS order of the
+version the file was rendered from, bank 0, numbered from 0 (some players count from 1). `FuMi-1.0.7.sf2` holds
+the fourteen of 1.0.7 in 1.0.7's order; 1.0.8 added seven voices and regrouped the list, and ships no new
+SoundFont, so this table is the 1.0.7 file's:
 
 | Program | Instrument | 名 | Kind | Sample |
 |---|---|---|---|---|

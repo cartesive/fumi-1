@@ -649,8 +649,19 @@ int main(void)
     }
     {   /* Kokyu 胡弓 (1.0.6): the bowed voice, placed before Taiko as on the ST-50; the note swells in */
         double a, b, c;
-        CHECK("fourteen instruments; Kokyu is the seventh, before Taiko",
-              fm_patch_count() == 14 && slot_of("Kokyu") == 6 && slot_of("Taiko") == 7 && !strcmp(fm_patch_ja(6), "\xe8\x83\xa1\xe5\xbc\x93"));
+        {   /* 1.0.8: twenty-one instruments in the ST-50 strip's families: kotos, bells, winds, the sustained
+             * voices, percussion; Koto stays first (the boot voice) */
+            static const char *const ORDER[21] = {"Koto", "Koto II", "Koto Pluck", "Koto Ring", "Koto Warm", "Harp",
+                "Chimes", "Rin", "Bell", "Ice Bells", "Shakuhachi", "Bamboo Flt", "Dragon Flt", "Sho",
+                "Kokyu", "Clarinet", "Strings", "Fairytale", "Taiko", "Hyoshigi", "Mokugyo"};
+            int k, same = fm_patch_count() == 21;
+            for (k = 0; same && k < 21; k++)
+                same = !strcmp(fm_patch_name(k), ORDER[k]);
+            CHECK("twenty-one instruments in the strip's families, Koto first", same);
+            CHECK("the new voices carry their Japanese names", !strcmp(fm_patch_ja(slot_of("Kokyu")), "\xe8\x83\xa1\xe5\xbc\x93")
+                  && !strcmp(fm_patch_ja(slot_of("Clarinet")), "\xe3\x82\xaf\xe3\x83\xa9\xe3\x83\xaa\xe3\x83\x8d\xe3\x83\x83\xe3\x83\x88")
+                  && !strcmp(fm_patch_ja(slot_of("Rin")), "\xe9\x88\xb4"));
+        }
         fm_init();
         fm_set(P_VOICE, slot_of("Kokyu"));
         fm_set(P_REVERB, 0);

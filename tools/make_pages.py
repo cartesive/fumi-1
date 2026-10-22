@@ -28,6 +28,8 @@ sys.path.insert(0, str(SRC / "web"))
 from make_site import product_of, strip_module  # noqa: E402  (Felucca's: the package format)
 
 REPO = "https://github.com/cartesive/fumi-1"
+SF_VERSION = "1.0.7"                         # the latest release that carries a SoundFont (docs/soundfont.md): a released
+                                             # file is frozen, and a version without a new render links the last one
 
 LANDING = """<!doctype html>
 <html lang="en">
@@ -91,7 +93,7 @@ quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div
   <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0 and −; no FM-1 needed.</span></a>
   <a href="install/"><strong>Install</strong><span>From Chrome or Edge, with the FM-1 connected by USB. Nothing to install on the computer.</span></a>
   <a href="firmware/__PKG__"><strong>Download __PKG__</strong><span>For the command-line installer: <code>python3 tools/fm1_install.py __PKG__</code></span></a>
-  <a href="__REPO__/releases/download/fumi-__VERSION__/FuMi-__VERSION__.sf2"><strong>The SoundFont, FuMi-__VERSION__.sf2</strong><span>Every instrument as samples for a DAW or any SoundFont player: white keys F3–G5, the Suiko tuning in the sound, dry, CC BY 4.0. 70 MB, from the release; the read-me is docs/soundfont.md in the source.</span></a>
+  <a href="__REPO__/releases/download/fumi-__SF_VERSION__/FuMi-__SF_VERSION__.sf2"><strong>The SoundFont, FuMi-__SF_VERSION__.sf2</strong><span>The instruments of __SF_VERSION__ as samples for a DAW or any SoundFont player: white keys F3–G5, the Suiko tuning in the sound, dry, CC BY 4.0. 70 MB, from that release; the read-me is docs/soundfont.md in the source.</span></a>
   <a href="bench/"><strong>The audition bench</strong><span>The voicing tool: the engine with a patch editor, DX7 .syx import, blind A/B, morphs, notes and reference clips, all in the browser.</span></a>
   <a href="__REPO__"><strong>Source</strong><span>GitHub, GPL-3.0. Built on FoMni and Felucca; the FM engine is Dexed's msfa.</span></a>
 </nav>
@@ -101,7 +103,7 @@ quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div
 <tr><td>White keys</td><td>mi fa la ti do × 3 and a top mi. The tonics (keys 1, 6, 11, 16) are lit. 三 is key 6.</td></tr>
 <tr><td>Black keys</td><td>The upper row fa♯ sol ti♭ do♯ re, five per octave. SEQ switches them to ornaments (below).</td></tr>
 <tr><td>SELECT</td><td>本数: 水4, 水3, 水2, 水1, 1 … 12. At 1本, 三 = A3.</td></tr>
-<tr><td>PRESETS</td><td>The instrument, fourteen of them (below).</td></tr>
+<tr><td>PRESETS</td><td>The instrument, twenty-one of them (below); the slider under the keys shows where in the list you are.</td></tr>
 <tr><td>ALGORITHM</td><td>The scale: IN 陰, YŌ 陽, MIN'YŌ 民謡.</td></tr>
 <tr><td>OCT− · OCT+</td><td>With a note held: a sprung bend down or up (semitone, whole tone or the next scale note). With nothing held: the octave. Both held 5 s: update mode.</td></tr>
 <tr><td>LFO · ARP · GLO</td><td>Vibrato on / off; trill on / off (in pairs, ka-ta, the first stroke the hardest); mono / poly. GLO held: the Trill pages.</td></tr>
@@ -117,24 +119,32 @@ Yamaha DX7-format voices; the built-ins are community patches and FuMi's own, wi
 among them.</p>
 
 <h2>The instruments</h2>
-<p>PRESETS steps through them; the screen shows each name with its Japanese name beneath, Suiko-style. The
-order follows the ST-50's voice slider: kotos, winds, the bowed voice, percussion. Eight are picks from
-community DX7 banks on patches.fm, six are FuMi's own. FuMi's own six respond to how hard they are struck.</p>
+<p>PRESETS steps through them; the screen shows each name with its Japanese name beneath, Suiko-style, and
+a voice slider with a notch per instrument. The order follows the ST-50's voice strip by family: the kotos, the
+bells, the winds, the sustained voices, percussion. Fifteen are picks from community DX7 banks on patches.fm,
+six are FuMi's own. FuMi's own six respond to how hard they are struck.</p>
 <table>
 <tr><td>1 Koto 琴</td><td>N-KOTO-A5, a community patch. The boot instrument.</td></tr>
 <tr><td>2 Koto II 箏</td><td>KOTO-KOTO, a community patch.</td></tr>
-<tr><td>3 Sho 笙</td><td>Air---*--3, a community patch: the mouth organ.</td></tr>
-<tr><td>4 Shakuhachi 尺八</td><td>PAN FL T A, a community patch.</td></tr>
-<tr><td>5 Dragon Flt 龍笛</td><td>ALTO FLUTE, a community patch: the ryūteki of gagaku.</td></tr>
-<tr><td>6 Bamboo Flt 篠笛</td><td>Bamboo Flt, a community patch: the shinobue.</td></tr>
-<tr><td>7 Kokyu 胡弓</td><td>The kokyū, the bowed string, one of the ST-50's own voices: after Viola.Ens by Tim Garrett, the attack slowed so the note swells in.</td></tr>
-<tr><td>8 Taiko 太鼓</td><td>Timpani.2 by Tim Garrett.</td></tr>
-<tr><td>9 Hyoshigi 拍子木</td><td>FuMi's own: two hardwood sticks struck together, a dry crack the same on every key. The trill rolls them.</td></tr>
-<tr><td>10 Mokugyo 木魚</td><td>FuMi's own: the wooden fish, a round pitched tok.</td></tr>
-<tr><td>11 Koto Pluck 爪音</td><td>FuMi's own, found by a search against measurements of the ST-50's koto.</td></tr>
-<tr><td>12 Koto Ring 響</td><td>FuMi's own, brighter.</td></tr>
-<tr><td>13 Koto Warm 名残</td><td>FuMi's own, rounder.</td></tr>
-<tr><td>14 Harp 箜篌</td><td>FuMi's own.</td></tr>
+<tr><td>3 Koto Pluck 爪音</td><td>FuMi's own, found by a search against measurements of the ST-50's koto.</td></tr>
+<tr><td>4 Koto Ring 響</td><td>FuMi's own, brighter.</td></tr>
+<tr><td>5 Koto Warm 名残</td><td>FuMi's own, rounder.</td></tr>
+<tr><td>6 Harp 箜篌</td><td>FuMi's own.</td></tr>
+<tr><td>7 Chimes チャイム</td><td>CHIMES 1, a community patch.</td></tr>
+<tr><td>8 Rin 鈴</td><td>TBTAN BELL by Tim Conrardy: the altar bowl, struck and left to ring.</td></tr>
+<tr><td>9 Bell ベル</td><td>MICHEL 2 by Tim Conrardy.</td></tr>
+<tr><td>10 Ice Bells 氷鈴</td><td>Ice.Bells1 by Tim Garrett.</td></tr>
+<tr><td>11 Shakuhachi 尺八</td><td>PAN FL T A, a community patch.</td></tr>
+<tr><td>12 Bamboo Flt 篠笛</td><td>Bamboo Flt, a community patch: the shinobue.</td></tr>
+<tr><td>13 Dragon Flt 龍笛</td><td>ALTO FLUTE, a community patch: the ryūteki of gagaku.</td></tr>
+<tr><td>14 Sho 笙</td><td>Air---*--3, a community patch: the mouth organ.</td></tr>
+<tr><td>15 Kokyu 胡弓</td><td>The kokyū, the bowed string, one of the ST-50's own voices: after Viola.Ens by Tim Garrett, the attack slowed so the note swells in.</td></tr>
+<tr><td>16 Clarinet クラリネット</td><td>Clarinet12 by Tim Garrett.</td></tr>
+<tr><td>17 Strings 弦楽</td><td>STRINGS 2 by Tim Conrardy.</td></tr>
+<tr><td>18 Fairytale 御伽</td><td>Fairlyte1a, a community patch: a slow pad that fades as it is held.</td></tr>
+<tr><td>19 Taiko 太鼓</td><td>Timpani.2 by Tim Garrett.</td></tr>
+<tr><td>20 Hyoshigi 拍子木</td><td>FuMi's own: two hardwood sticks struck together, a dry crack the same on every key. The trill rolls them.</td></tr>
+<tr><td>21 Mokugyo 木魚</td><td>FuMi's own: the wooden fish, a round pitched tok.</td></tr>
 </table>
 
 <h2>What comes from the ST-50</h2>
@@ -238,7 +248,7 @@ def main(pkg, version, out):
     except OSError:
         sha = "?"
     (out / "index.html").write_text(LANDING.replace("__VERSION__", html.escape(version)).replace("__PKG__", name)
-                                    .replace("__REPO__", REPO).replace("__SHA__", sha), encoding="utf-8")
+                                    .replace("__REPO__", REPO).replace("__SF_VERSION__", SF_VERSION).replace("__SHA__", sha), encoding="utf-8")
     emu, bench = SRC / "build" / "emu", SRC / "build" / "bench"
     if not (emu / "fumi.wasm").exists() or not (bench / "fumi.wasm").exists():
         raise SystemExit("no build/emu/fumi.wasm or build/bench/fumi.wasm: run web/emu/build.sh (needs Emscripten)")

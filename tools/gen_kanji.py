@@ -19,8 +19,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from fumi_patches import PATCHES  # noqa: E402
 
 PAD, FIRST = 2, 0x21
-SIZES = [("JP", 16), ("JPL", 48)]            # the small name under a label; the big one on the HOME screen
+SIZES = [("JP", 16), ("JPL", 48), ("JPM", 24), ("JPS", 12)]   # the small name under a label; the big one on the HOME
+                                             # screen; the big one for names of four characters or more (1.0.8);
+                                             # the key labels under the round keys (1.0.8)
 EXTRA = "颪"                                 # the header's oroshi tag (1.0.7), FM_KANJI_OROSHI
+KEY_LABELS = ["水", "", "乙", "一", "二", "三", "三′", "五", "六", "七", "八", "", "", "", "", ""]   # printed under the
+                                             # ST-50's lower keys (docs/research/10): the conductor's names, 三 = mi
 CANDIDATES = ["/Applications/Ableton Live 12 Standard.app/Contents/App-Resources/Fonts/NotoSansCJKjp-Bold.otf",
               "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc", "/usr/share/fonts/noto-cjk/NotoSansCJK-Bold.ttc"]
 
@@ -41,7 +45,7 @@ def main(out, font_arg=None):
         for ch in ja:
             if ch not in chars:
                 chars.append(ch)
-    for ch in EXTRA:
+    for ch in EXTRA + "".join(KEY_LABELS):
         if ch not in chars:
             chars.append(ch)
     assert len(chars) <= 0x7E - FIRST + 1
@@ -51,14 +55,22 @@ def main(out, font_arg=None):
          "#pragma once", "#include <stdint.h>",
          "/* " + " ".join(f"{chr(FIRST + i)}={ch}" for i, ch in enumerate(chars)) + " */"]
     total = 0
+    short = {ch for _, ja, _ in PATCHES if len(ja) <= 3 for ch in ja}      # drawn at 48 px on HOME
+    long_ = {ch for _, ja, _ in PATCHES if len(ja) >= 4 for ch in ja}      # drawn at 24 px on HOME (1.0.8): four
+                                                                           # characters at 48 px leave no room for the name
+    labels = {ch for l in KEY_LABELS for ch in l}
+    NEEDED = {"JP": set(EXTRA), "JPL": short, "JPM": long_, "JPS": labels}  # a size holds only the glyphs it draws (JP: the header tag)
     for name, px_size in SIZES:
         font = ImageFont.truetype(path, px_size)
         asc, desc = font.getmetrics()
-        top = min(font.getbbox(ch)[1] for ch in chars)
-        bottom = max(font.getbbox(ch)[3] for ch in chars)
+        top = min(font.getbbox(ch)[1] for ch in chars if ch in NEEDED[name])
+        bottom = max(font.getbbox(ch)[3] for ch in chars if ch in NEEDED[name])
         h = bottom - top
         data, offs, advs, bws = [], [], [], []
         for ch in chars:
+            if ch not in NEEDED[name]:                 # an empty slot: no data, nothing drawn
+                offs.append(len(data)); advs.append(0); bws.append(0)
+                continue
             adv = int(round(font.getlength(ch)))
             bw = adv + 2 * PAD
             img = Image.new("L", (bw, asc + desc), 0)
@@ -84,7 +96,10 @@ def main(out, font_arg=None):
               f"static const felucca_font_t FONT_{name} = {{ {h}, {PAD}, {FIRST}, {FIRST + len(chars) - 1}, FONT_{name}_ADV, FONT_{name}_BW, FONT_{name}_OFF, FONT_{name}_DATA }};"]
     L += [f"static const char *const FM_PATCH_JA_LCD[{len(PATCHES)}] = {{" +
           ", ".join('"' + "".join(chr(FIRST + chars.index(ch)).replace("\\", "\\\\").replace('"', '\\"') for ch in ja) + '"' for _, ja, _ in PATCHES) + "};",
-          "#define FM_KANJI_OROSHI \"" + chr(FIRST + chars.index("颪")).replace("\\", "\\\\").replace('"', '\\"') + "\"   /* 颪, FONT_JP: the header tag */", ""]
+          "#define FM_KANJI_OROSHI \"" + chr(FIRST + chars.index("颪")).replace("\\", "\\\\").replace('"', '\\"') + "\"   /* 颪, FONT_JP: the header tag */",
+          "/* the labels under the sixteen white keys, FONT_JPS: " + " ".join(l or "-" for l in KEY_LABELS) + " */",
+          "static const char *const FM_KANJI_KEY_LABEL[16] = {" +
+          ", ".join('"' + "".join(chr(FIRST + chars.index(ch)).replace("\\", "\\\\").replace('"', '\\"') for ch in l) + '"' for l in KEY_LABELS) + "};", ""]
     Path(out).write_text("\n".join(L))
     print(f"kanji: {out} ({len(chars)} glyphs x {len(SIZES)} sizes, {total} B) from {Path(path).name}")
 

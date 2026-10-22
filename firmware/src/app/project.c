@@ -30,9 +30,14 @@ static int project_valid(void)
     return 1;
 }
 
+/* 1.0.8 put the instruments into the strip's families (Koto, Koto II, Koto Pluck, Koto Ring, Koto Warm, Harp, the
+ * bells, Shakuhachi, Bamboo Flt, Dragon Flt, Sho, Kokyu, the sustained voices, Taiko, Hyoshigi, Mokugyo): a format-3
+ * (1.0.6, 1.0.7) instrument number, by name, in the new order */
+static const uint8_t VOICE_V3_TO_V4[14] = {0, 1, 13, 10, 12, 11, 14, 18, 19, 20, 2, 3, 4, 5};
+
 /* a format-2 project (1.0.4, 1.0.5): the same parameters up to the looper's; Kokyu was put before Taiko, so an
- * instrument from Taiko on moves up one; Trill var became Trill feel (a new meaning: its new default); the trill's
- * defaults are new */
+ * instrument from Taiko on moves up one, and then the 1.0.8 renumbering; Trill var became Trill feel (a new meaning:
+ * its new default); the trill's defaults are new */
 static int project_migrate(const uint8_t *raw, int n)
 {
     uint32_t i;
@@ -43,8 +48,24 @@ static int project_migrate(const uint8_t *raw, int n)
         proj.par[i] = (int16_t)((uint32_t)raw[8 + 2 * i] | (uint32_t)raw[9 + 2 * i] << 8);
     if (proj.par[P_VOICE] >= 6)
         proj.par[P_VOICE]++;
+    if (proj.par[P_VOICE] < 0 || proj.par[P_VOICE] >= 14)
+        return 0;
+    proj.par[P_VOICE] = VOICE_V3_TO_V4[proj.par[P_VOICE]];
     proj.par[P_TRILL_VAR] = fm_param_info(P_TRILL_VAR)->def;
     proj.leds = raw[8 + 2 * PROJ_NPAR_V2];
+    return project_valid();
+}
+
+/* a format-3 project (1.0.6, 1.0.7): the same parameters; the saved instrument is renumbered to keep its name */
+static int project_migrate_v3(const uint8_t *raw, int n)
+{
+    if (n < (int)sizeof proj)
+        return 0;
+    memcpy(&proj, raw, sizeof proj);
+    proj.format = PROJ_FORMAT;
+    if (proj.par[P_VOICE] < 0 || proj.par[P_VOICE] >= 14)
+        return 0;
+    proj.par[P_VOICE] = VOICE_V3_TO_V4[proj.par[P_VOICE]];
     return project_valid();
 }
 
@@ -63,6 +84,8 @@ int project_load(void)
             if (project_valid())
                 return 0;
         } else if (magic == PROJ_MAGIC && format == 2u && project_migrate(raw, n)) {
+            return 0;
+        } else if (magic == PROJ_MAGIC && format == 3u && project_migrate_v3(raw, n)) {
             return 0;
         }
     }

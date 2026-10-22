@@ -31,7 +31,11 @@ URL = "https://github.com/cartesive/fumi-1"
 # the kinds, by the firmware's instrument name (sf_test.py checks every instrument has one)
 KIND = {"Koto": "pluck", "Koto II": "pluck", "Sho": "sustain", "Shakuhachi": "sustain", "Dragon Flt": "sustain",
         "Bamboo Flt": "sustain", "Kokyu": "sustain", "Taiko": "perc", "Hyoshigi": "perc", "Mokugyo": "perc",
-        "Koto Pluck": "pluck", "Koto Ring": "pluck", "Koto Warm": "pluck", "Harp": "pluck"}
+        "Koto Pluck": "pluck", "Koto Ring": "pluck", "Koto Warm": "pluck", "Harp": "pluck",
+        # 1.0.8: the bells ring out (Bell holds while the key is down: a sustained voice), the clarinet, the strings and
+        # the fairytale pad hold
+        "Chimes": "pluck", "Rin": "pluck", "Bell": "sustain", "Ice Bells": "pluck",
+        "Clarinet": "sustain", "Strings": "sustain", "Fairytale": "sustain"}
 SETTINGS = {
     #            kept at most, cut where it fell to, fade if it reached the limit, fade after a cut, release, peak
     "pluck":   dict(limit=6.0, cut_db=-60.0, fade=0.6, fade_cut=0.03, release=1.3, peak_db=-1.0),

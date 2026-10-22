@@ -24,6 +24,7 @@
  *     WHAT: view parN (fumi.h P_*) dirty store_writes midi_out nvoices bend10 (cents x 10) keylevelK (x 100)
  *           custom peak_db_max peak_db_min screen loop_state loop_len loop_pos loop_layers loop_events
  *   reboot                       re-run boot from the simulated flash (persistence test)
+ *   store_v2 VOICE | store_v3 VOICE   an older project (format 2 / 3) on instrument VOICE, for the migration
  */
 #define OM_HOST 1
 #define FM_HOST 1
@@ -578,6 +579,17 @@ int main(int argc, char **argv)
             }
             raw[8 + 2 * PROJ_NPAR_V2] = 1;
             plat_store_save(OBJ_PROJ, raw, sizeof raw);
+        } else if (!strcmp(cmd, "store_v3")) {        /* store_v3 VOICE: a 1.0.7 (format 3) project on instrument VOICE (1.0.8 reordered them) */
+            project_t p3;
+            uint32_t i;
+            memset(&p3, 0, sizeof p3);
+            p3.magic = PROJ_MAGIC;
+            p3.format = 3;
+            for (i = 0; i < P_NPARAMS; i++)
+                p3.par[i] = (int16_t)fm_param_info((int)i)->def;
+            p3.par[P_VOICE] = (int16_t)atoi(a);
+            p3.leds = 1;
+            plat_store_save(OBJ_PROJ, &p3, sizeof p3);
         } else if (!strcmp(cmd, "echo"))
             printf("%s", line + 5);
         else {

@@ -3,6 +3,27 @@
 Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 reports the identity
 (`python3 tools/fm1_install.py --info`).
 
+## 1.0.8 (22 Oct 2026) — `FM-1_7010008`
+
+- **Seven more voices**, the owner's picks from community banks on patches.fm: Chimes チャイム (CHIMES 1), Rin 鈴
+  (TBTAN BELL by Tim Conrardy), Bell ベル (MICHEL 2 by Tim Conrardy), Ice Bells 氷鈴 (Ice.Bells1 by Tim Garrett),
+  Clarinet クラリネット (Clarinet12 by Tim Garrett), Strings 弦楽 (STRINGS 2 by Tim Conrardy) and Fairytale 御伽
+  (Fairlyte1a). Voices written an octave up or down have their ratios doubled or halved, as the engine ignores a
+  patch's transpose (`tools/patchfm_import.py`); four were trimmed into the others' level band (Rin −4 dB, Bell
+  −1.5, Ice Bells −8, Fairytale −3, measured at key 三).
+- **Twenty-one instruments in the ST-50 strip's families**, not appended: the kotos (Koto, Koto II, Koto Pluck, Koto
+  Ring, Koto Warm, Harp), the bells, the winds (Shakuhachi, Bamboo Flt, Dragon Flt, Sho), the sustained voices (Kokyu,
+  Clarinet, Strings, Fairytale), percussion (Taiko, Hyoshigi, Mokugyo). Koto is still the boot voice. A setup saved
+  by 1.0.6 or 1.0.7 keeps its instrument by name (PROJ_FORMAT 4, the slot renumbered on load). The 1.0.7 SoundFont
+  keeps 1.0.7's numbering, as a released file does.
+- **The screen's keys are the panel's**: two rows of round caps, sixteen below with the ST-50's tan caps on ラ乙 シ一
+  ミ三 ラ五 シ六, eleven above sitting between them, each lit with its voice; under the lower row the conductor's
+  names 水 乙 一 二 三 三′ 五 六 七 八 as printed on the panel, 三 marked. Beneath them a **voice slider**, the 音色
+  strip: a notch per instrument in PRESETS order, a wider gap where the family changes, the one playing filled; the
+  name in large type says which. Names of four characters or more take a 24 px face so the Latin name keeps its
+  room. The bench's on-screen keys follow the same layout.
+- The firmware grows by the glyphs (each size holds only what it draws: 51 glyphs, 43 KB) and the seven voices.
+
 ## 1.0.7 (12 Oct 2026) — `FM-1_7010007`
 
 - **Fixed: the trill on the hyōshigi.** The trill clock gave up when the held key's voice was gone, and a

@@ -19,7 +19,7 @@ FuMi lives in `firmware/src/app/` and `firmware/src/dsp/`.
 <img src="docs/img/screen-home.png" width="240" height="240" alt="FuMi-1's HOME screen: 1本, A3, SUIKO tuning, the in scale, and the koto 琴 large"> <img src="docs/img/screen-loop.png" width="240" height="240" alt="FuMi-1 overdubbing a loop: the DUB tag and the loop bar under the keys">
 
 **Status (12 Oct 2026):** version 1.0.7 (identity `FM-1_7010007`). It has run on one FM-1, the author's,
-since 0.1. What works: the pitch core and the measured tuning, fourteen instruments with their names in
+since 0.1. What works: the pitch core and the measured tuning, twenty-one instruments with their names in
 kanji, the bends, the seven ornament keys (the koto's left hand among them), vibrato, the trill in pairs
 with oroshi, 余韻, mono with slide, the voicing stages, reverb, MIDI in with velocity and MIDI out, the
 looper, the host simulator, the browser emulator, the audition bench and the web installer. What
@@ -204,31 +204,42 @@ web/bench/serve.py      # then open http://localhost:8765/build/bench/
 ## The instruments
 
 PRESETS steps through the built-in instruments; the screen shows each one's name with its Japanese name
-beneath, Suiko-style. Eight are the owner's picks from community DX7 banks on patches.fm (each entry in
-`tools/fumi_patches.py` names its bank and author; one of them, the kokyū, is altered and says so); six are
-FuMi's own. The order follows the ST-50's voice slider: kotos, winds, the bowed voice, percussion.
+beneath, Suiko-style, and a voice slider with a notch per instrument. Fifteen are the owner's picks from
+community DX7 banks on patches.fm (each entry in `tools/fumi_patches.py` names its bank and author; the kokyū
+is altered and says so); six are FuMi's own. The order follows the ST-50's voice strip by family: the kotos,
+the bells, the winds, the sustained voices, percussion (1.0.8).
 
 | # | Name | 名 | From |
 |---|---|---|---|
 | 1 | Koto | 琴 | N-KOTO-A5, a community patch. The boot instrument |
 | 2 | Koto II | 箏 | KOTO-KOTO, a community patch |
-| 3 | Sho | 笙 | Air---*--3, a community patch |
-| 4 | Shakuhachi | 尺八 | PAN FL T A, a community patch |
-| 5 | Dragon Flt | 龍笛 | ALTO FLUTE, a community patch |
-| 6 | Bamboo Flt | 篠笛 | Bamboo Flt, a community patch |
-| 7 | Kokyu | 胡弓 | The kokyū, the ST-50's bowed voice: after Viola.Ens by Tim Garrett (TX7-80B), the attack slowed so the note swells in |
-| 8 | Taiko | 太鼓 | Timpani.2 by Tim Garrett |
-| 9 | Hyoshigi | 拍子木 | **FuMi's own**: two hardwood sticks, a dry crack, the same on every key |
-| 10 | Mokugyo | 木魚 | **FuMi's own**: the wooden fish, a round pitched tok |
-| 11 | Koto Pluck | 爪音 | **FuMi's own**, found by `tools/koto_search.c` against the ST-50 measurements |
-| 12 | Koto Ring | 響 | **FuMi's own**, brighter |
-| 13 | Koto Warm | 名残 | **FuMi's own**, rounder |
-| 14 | Harp | 箜篌 | **FuMi's own** |
+| 3 | Koto Pluck | 爪音 | **FuMi's own**, found by `tools/koto_search.c` against the ST-50 measurements |
+| 4 | Koto Ring | 響 | **FuMi's own**, brighter |
+| 5 | Koto Warm | 名残 | **FuMi's own**, rounder |
+| 6 | Harp | 箜篌 | **FuMi's own** |
+| 7 | Chimes | チャイム | CHIMES 1, a community patch |
+| 8 | Rin | 鈴 | TBTAN BELL by Tim Conrardy: the altar bowl, struck and left to ring |
+| 9 | Bell | ベル | MICHEL 2 by Tim Conrardy |
+| 10 | Ice Bells | 氷鈴 | Ice.Bells1 by Tim Garrett |
+| 11 | Shakuhachi | 尺八 | PAN FL T A, a community patch |
+| 12 | Bamboo Flt | 篠笛 | Bamboo Flt, a community patch |
+| 13 | Dragon Flt | 龍笛 | ALTO FLUTE, a community patch |
+| 14 | Sho | 笙 | Air---*--3, a community patch |
+| 15 | Kokyu | 胡弓 | The kokyū, the ST-50's bowed voice: after Viola.Ens by Tim Garrett (TX7-80B), the attack slowed so the note swells in |
+| 16 | Clarinet | クラリネット | Clarinet12 by Tim Garrett |
+| 17 | Strings | 弦楽 | STRINGS 2 by Tim Conrardy |
+| 18 | Fairytale | 御伽 | Fairlyte1a, a community patch: a slow pad that fades as it is held |
+| 19 | Taiko | 太鼓 | Timpani.2 by Tim Garrett |
+| 20 | Hyoshigi | 拍子木 | **FuMi's own**: two hardwood sticks, a dry crack, the same on every key |
+| 21 | Mokugyo | 木魚 | **FuMi's own**: the wooden fish, a round pitched tok |
 
-FuMi's own six respond to velocity (1.0.6), for the trill's accents and for MIDI in.
+FuMi's own six respond to velocity (1.0.6), for the trill's accents and for MIDI in. A voice written an octave
+up or down in its bank has its ratios doubled or halved on import (`tools/patchfm_import.py`), since the engine
+ignores a patch's transpose; the 1.0.8 voices were trimmed into the others' level band.
 
 No Yamaha factory ROM voice is among them (a ROM2B pick was declined). The kanji come from Noto Sans CJK
-(SIL OFL 1.1) through `tools/gen_kanji.py`, which keeps only the characters these names use.
+(SIL OFL 1.1) through `tools/gen_kanji.py`, which keeps only the characters these names use, in the sizes
+each is drawn at.
 
 ## The SoundFont
 
@@ -256,6 +267,7 @@ to put into `bench/sessions/`.
 - `tools/analyze_ref.py`: reference-audio analysis (pitch per note, spectral peaks, attack, click, decay, partials).
 - `tools/syx_dump.py`: dump and diff DX7 voices.
 - `tools/fumi_patches.py`: the built-in patches, as readable operator settings, into `fumi_patches.h`.
+- `tools/patchfm_import.py`: a patches.fm voice (its JSON) as an entry for `fumi_patches.py`, the octave transposes folded into the ratios.
 - `tools/koto_search.c`: a search over the engine's settings against the ST-50 koto measurements (how KOTO A and B were found).
 - `tools/gen_fm6_tables.py`: the FM6 core's tables.
 - `tools/guard_platform.sh`: fails if any protected platform file differs from upstream FoMni.
