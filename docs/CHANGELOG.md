@@ -14,8 +14,12 @@ Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 re
 - **Twenty-one instruments in the ST-50 strip's families**, not appended: the kotos (Koto, Koto II, Koto Pluck, Koto
   Ring, Koto Warm, Harp), the bells, the winds (Shakuhachi, Bamboo Flt, Dragon Flt, Sho), the sustained voices (Kokyu,
   Clarinet, Strings, Fairytale), percussion (Taiko, Hyoshigi, Mokugyo). Koto is still the boot voice. A setup saved
-  by 1.0.6 or 1.0.7 keeps its instrument by name (PROJ_FORMAT 4, the slot renumbered on load). The 1.0.7 SoundFont
-  keeps 1.0.7's numbering, as a released file does.
+  by 1.0.6 or 1.0.7 keeps its instrument by name (PROJ_FORMAT 4, the slot renumbered on load).
+- **`FuMi-1.0.8.sf2` on the release** (22 Oct 2026, 114 MB): the twenty-one instruments as a SoundFont in this
+  version's order, rendered as in 1.0.7 (`docs/soundfont.md`). The three ringing bells are a kind of their own in
+  the tools, trimmed as plucks but their pitch only reported: Ice Bells has no carrier at the key (a strike tone a
+  pitch estimate reads about 48 cents sharp) and Rin keeps its author's +7 detune. The 1.0.7 file stays on the
+  1.0.7 release in 1.0.7's numbering, as a released file does.
 - **The screen's keys are the panel's**: two rows of round caps, sixteen below with the ST-50's tan caps on ラ乙 シ一
   ミ三 ラ五 シ六, eleven above sitting between them, each lit with its voice; under the lower row the conductor's
   names 水 乙 一 二 三 三′ 五 六 七 八 as printed on the panel, 三 marked. Beneath them a **voice slider**, the 音色

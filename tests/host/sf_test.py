@@ -35,15 +35,17 @@ def write_wav(path, s):
         w.writeframes(s.tobytes())
 
 def main():
-    names = [("Koto", "pluck"), ("Sho", "sustain"), ("Taiko", "perc")]
+    # a bell is a pluck whose pitch is only reported: a bell's partials are the author's (1.0.8), so this one is
+    # rendered 40 cents sharp and must pass as a bell and fail as a pluck
+    names = [("Koto", "pluck"), ("Sho", "sustain"), ("Taiko", "perc"), ("Rin", "bell")]
     tmp = Path(tempfile.mkdtemp(prefix="sf_test_"))
     try:
         for i, (name, kind) in enumerate(names):
             d = tmp / "render" / f"{i:02d}-{name}"
             d.mkdir(parents=True)
             for k in range(16):
-                f = sf_bank.target_hz(k)
-                s = tone(f, 8.0, decay_s=0.5 if kind == "pluck" else 0.2 if kind == "perc" else None)
+                f = sf_bank.target_hz(k) * (2 ** (40 / 1200) if kind == "bell" else 1)
+                s = tone(f, 8.0, decay_s=0.5 if kind in ("pluck", "bell") else 0.2 if kind == "perc" else None)
                 write_wav(d / f"k{k:02d}.wav", s)
         out = tmp / "test.sf2"
         sf_bank.build(tmp / "render", out, "9.9.9", names=names, date="2026-10-13")
@@ -55,6 +57,8 @@ def main():
         check("file info names the FuMi version", "9.9.9" in sf.info.get("INAM", "") and "2026-10-13" == sf.info.get("ICRD"))
         check("the comment carries the tuning, the layout and the licence",
               all(w in sf.info.get("ICMT", "") for w in ("-20.8", "-16.0", "white", "CC BY 4.0")))
+        check("the comment credits the 1.0.8 voices' authors and banks (Clarinet12, BELGIE, Tim Conrardy, fifteen from patches.fm)",
+              all(w in sf.info.get("ICMT", "") for w in ("Clarinet12", "BELGIE", "Tim Conrardy", "Fifteen instruments")))
         for p in sf.presets:
             zones = p.zones
             check(f"{p.name}: sixteen zones on the white keys F3..G5, each rooted on its own key",
@@ -68,15 +72,21 @@ def main():
             check(f"{p.name}: no loop", all(z.sample_mode == 0 for z in zones))
             check(f"{p.name}: every sample ends in silence (faded)", all(abs(int(z.sample[-1])) <= 1 for z in zones))
             cents = [sf_check.pitch_cents(z.sample, sf_check.target_hz(i)) for i, z in enumerate(zones)]
-            check(f"{p.name}: pitch within 0.5 cents of the Suiko target on every key (worst {max(map(abs, cents)):.2f})", max(map(abs, cents)) < 0.5)
+            if p.name == "Rin":
+                check(f"{p.name}: the bell's 40 cents are heard as rendered (worst {max(map(abs, cents)):.2f})", all(abs(c - 40) < 0.5 for c in cents))
+            else:
+                check(f"{p.name}: pitch within 0.5 cents of the Suiko target on every key (worst {max(map(abs, cents)):.2f})", max(map(abs, cents)) < 0.5)
             check(f"{p.name}: the onset is kept (sound within 3 ms of the start)", all(np.abs(z.sample[:132]).max() > 0.1 * np.abs(z.sample).max() for z in zones))
         lens = {p.name: [len(z.sample) / SR for z in p.zones] for p in sf.presets}
         # the synthetic pluck is at -60 dB after 0.5 * ln(1000) = 3.45 s: cut there, not at the 6 s limit
         check(f"pluck: cut where it fell 60 dB, about 3.45 s ({lens['Koto'][0]:.2f} s)", all(3.3 < s < 3.7 for s in lens["Koto"]))
+        check(f"bell: trimmed as a pluck, about 3.45 s ({lens['Rin'][0]:.2f} s)", all(3.3 < s < 3.7 for s in lens["Rin"]))
         check(f"sustain: exactly 4 s ({lens['Sho'][0]:.2f} s)", all(abs(s - 4.0) < 0.002 for s in lens["Sho"]))
         check(f"perc: cut at -60 dB, about 1.38 s ({lens['Taiko'][0]:.2f} s)", all(1.25 < s < 1.5 for s in lens["Taiko"]))
-        report = sf_check.check(out, names=names)
-        check("sf_check passes its own bank", report.ok)
+        report = sf_check.check(out, names=names, log=lambda *a: None)
+        check("sf_check passes its own bank (the bell's pitch reported, not judged)", report.ok)
+        as_pluck = sf_check.check(out, names=names[:3] + [("Rin", "pluck")], log=lambda *a: None)
+        check("the same bell as a pluck fails the 3-cent rule", not as_pluck.ok and any("Rin: pitch" in f for f in as_pluck.fails))
         # the real instrument list: every firmware instrument has a kind
         import fumi_patches
         check("every firmware instrument has a kind in sf_bank.KIND", all(n in sf_bank.KIND for n, _, _ in fumi_patches.PATCHES))

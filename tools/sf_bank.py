@@ -32,9 +32,10 @@ URL = "https://github.com/cartesive/fumi-1"
 KIND = {"Koto": "pluck", "Koto II": "pluck", "Sho": "sustain", "Shakuhachi": "sustain", "Dragon Flt": "sustain",
         "Bamboo Flt": "sustain", "Kokyu": "sustain", "Taiko": "perc", "Hyoshigi": "perc", "Mokugyo": "perc",
         "Koto Pluck": "pluck", "Koto Ring": "pluck", "Koto Warm": "pluck", "Harp": "pluck",
-        # 1.0.8: the bells ring out (Bell holds while the key is down: a sustained voice), the clarinet, the strings and
-        # the fairytale pad hold
-        "Chimes": "pluck", "Rin": "pluck", "Bell": "sustain", "Ice Bells": "pluck",
+        # 1.0.8: the bells ring out like a pluck but their partials are the author's (Ice Bells' lowest carriers sit at
+        # 4.03 and 3.37 x the key, Rin's fundamental carries a +7 detune), so sf_check reports their pitch and does not
+        # judge it; Bell holds while the key is down, a sustained voice, as do the clarinet, the strings and the fairytale pad
+        "Chimes": "bell", "Rin": "bell", "Bell": "sustain", "Ice Bells": "bell",
         "Clarinet": "sustain", "Strings": "sustain", "Fairytale": "sustain"}
 SETTINGS = {
     #            kept at most, cut where it fell to, fade if it reached the limit, fade after a cut, release, peak
@@ -42,7 +43,8 @@ SETTINGS = {
     "sustain": dict(limit=4.0, cut_db=None,  fade=0.4, fade_cut=0.03, release=0.4, peak_db=-7.0),
     "perc":    dict(limit=3.0, cut_db=-60.0, fade=0.6, fade_cut=0.03, release=2.0, peak_db=-1.0),
 }
-HOLD_MS = {"pluck": 6000, "sustain": 4500, "perc": 3000}                         # how long sf_render.py holds the key
+SETTINGS["bell"] = SETTINGS["pluck"]                                             # trimmed and released as a pluck
+HOLD_MS = {"pluck": 6000, "bell": 6000, "sustain": 4500, "perc": 3000}           # how long sf_render.py holds the key
 
 def names():
     """(name, kind) for every firmware instrument, in the firmware's order (= the program numbers)"""
@@ -112,11 +114,15 @@ CREDITS = ("Rendered by FuMi-1's own FM engine (the firmware for the M-VAVE FM-1
            "Sixteen scale notes on the white keys F3..G5, mi fa la ti do x 3 and a top mi, at 1 hon (mi = A); black keys "
            "silent. The Suiko tuning (fa -20.8, do -16.0 cents) is in the samples, so transposing keeps it. Dry: add your "
            "own reverb. Programs follow the FM-1's instrument order. "
-           "Eight instruments are voiced from community DX7 patches (patches.fm): Koto = N-KOTO-A5 (Aminet 073.syx), "
+           "Fifteen instruments are voiced from community DX7 patches (patches.fm): Koto = N-KOTO-A5 (Aminet 073.syx), "
            "Koto II = KOTO-KOTO (Aminet 072.syx), Sho = Air---*--3 and Dragon Flt = ALTO FLUTE and Bamboo Flt (FLUTE01.SYX, "
            "author unknown), Shakuhachi = PAN FL T A (AAAHGOOD.SYX, author unknown), Kokyu = after Viola.Ens by Tim Garrett "
-           "(TX7-80B, attack slowed), Taiko = Timpani.2 by Tim Garrett (TX7-26B). Hyoshigi, Mokugyo, Koto Pluck, Koto Ring, "
-           "Koto Warm and Harp are FuMi's own. The FM core is msfa (Dexed, Apache-2.0). No Yamaha ROM voice and no ST-50 "
+           "(TX7-80B, attack slowed), Taiko = Timpani.2 by Tim Garrett (TX7-26B); from 1.0.8, Chimes = CHIMES 1 (CHRPER10.SYX, "
+           "author unknown), Rin = TBTAN BELL by Tim Conrardy (FLUTES.SYX), Bell = MICHEL 2 by Tim Conrardy (BELGIE.SYX), "
+           "Ice Bells = Ice.Bells1 by Tim Garrett (TX7-33), Clarinet = Clarinet12 by Tim Garrett (TX7-62), Strings = STRINGS 2 "
+           "by Tim Conrardy (BEST03.SYX), Fairytale = Fairlyte1a (CHOIR04.SYX, author unknown), some transposed or trimmed. "
+           "Hyoshigi, Mokugyo, Koto Pluck, Koto Ring, Koto Warm and Harp are FuMi's own. The FM core is msfa (Dexed, Apache-2.0). "
+           "No Yamaha ROM voice and no ST-50 "
            "audio is involved. These samples: " + LICENCE + " (credit FuMi-1 and the patch authors above). "
            "Each released SoundFont is frozen: a revoiced instrument comes as a new file under a new version.")
 

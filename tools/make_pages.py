@@ -28,7 +28,7 @@ sys.path.insert(0, str(SRC / "web"))
 from make_site import product_of, strip_module  # noqa: E402  (Felucca's: the package format)
 
 REPO = "https://github.com/cartesive/fumi-1"
-SF_VERSION = "1.0.7"                         # the latest release that carries a SoundFont (docs/soundfont.md): a released
+SF_VERSION = "1.0.8"                         # the latest release that carries a SoundFont (docs/soundfont.md): a released
                                              # file is frozen, and a version without a new render links the last one
 
 LANDING = """<!doctype html>
@@ -93,7 +93,7 @@ quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div
   <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0 and −; no FM-1 needed.</span></a>
   <a href="install/"><strong>Install</strong><span>From Chrome or Edge, with the FM-1 connected by USB. Nothing to install on the computer.</span></a>
   <a href="firmware/__PKG__"><strong>Download __PKG__</strong><span>For the command-line installer: <code>python3 tools/fm1_install.py __PKG__</code></span></a>
-  <a href="__REPO__/releases/download/fumi-__SF_VERSION__/FuMi-__SF_VERSION__.sf2"><strong>The SoundFont, FuMi-__SF_VERSION__.sf2</strong><span>The instruments of __SF_VERSION__ as samples for a DAW or any SoundFont player: white keys F3–G5, the Suiko tuning in the sound, dry, CC BY 4.0. 70 MB, from that release; the read-me is docs/soundfont.md in the source.</span></a>
+  <a href="__REPO__/releases/download/fumi-__SF_VERSION__/FuMi-__SF_VERSION__.sf2"><strong>The SoundFont, FuMi-__SF_VERSION__.sf2</strong><span>The instruments of __SF_VERSION__ as samples for a DAW or any SoundFont player: white keys F3–G5, the Suiko tuning in the sound, dry, CC BY 4.0. 114 MB, from that release; the read-me is docs/soundfont.md in the source.</span></a>
   <a href="bench/"><strong>The audition bench</strong><span>The voicing tool: the engine with a patch editor, DX7 .syx import, blind A/B, morphs, notes and reference clips, all in the browser.</span></a>
   <a href="__REPO__"><strong>Source</strong><span>GitHub, GPL-3.0. Built on FoMni and Felucca; the FM engine is Dexed's msfa.</span></a>
 </nav>

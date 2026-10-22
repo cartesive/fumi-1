@@ -18,8 +18,9 @@ SR = sf_bank.SR
 WHITE = sf_bank.WHITE
 BLACK = [k for k in range(21, 109) if k not in WHITE]           # every other key, A0..C8: silent
 target_hz = sf_bank.target_hz
-PITCH_TOL = {"pluck": 3.0, "sustain": None, "perc": None}        # cents; None: report only (a patch's own detune, the
-                                                                 # drum's inharmonic partials, the hyoshigi's unpitched crack)
+PITCH_TOL = {"pluck": 3.0, "bell": None, "sustain": None, "perc": None}   # cents; None: report only (a patch's own detune,
+                                                                 # a bell's partials, the drum's inharmonic partials, the
+                                                                 # hyoshigi's unpitched crack)
 
 def chunks(data, pos, end):
     while pos + 8 <= end:
