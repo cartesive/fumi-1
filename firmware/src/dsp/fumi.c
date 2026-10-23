@@ -29,7 +29,7 @@ static const fm_param_t PARAMS[P_NPARAMS] = {
     {"Fine", -50, 50, 0}, {"A", 430, 445, 440}, {"Octave", -1, 1, 0},
     {"Voice", 0, FM_NPATCH - 1, 0}, {"Yoin", 0, 100, 80}, {"Level", 0, 100, 80},
     {"Vibrato", 0, 1, 0}, {"Vib rate", 0, 100, 45}, {"Vib depth", 0, 100, 80},
-    {"Trill", 0, 1, 0}, {"Trill rate", 0, 100, 50}, {"Trill feel", 0, 100, 100},
+    {"Trill", 0, 1, 0}, {"Trill rate", 0, 100, 85}, {"Trill feel", 0, 100, 100},      /* the rate starts at 85 (1.1.0) */
     {"Mono", 0, 1, 0}, {"Black keys", 0, 1, 0}, {"Bend up", 0, 2, BEND_T_SEMI}, {"Bend down", 0, 100, 40},
     {"Bend time", 20, 300, 90}, {"Slide", 0, 1, 0}, {"Slide time", 10, 500, 80},
     {"Low cut", 0, 100, 10}, {"High cut", 0, 100, 100}, {"Character", 0, 100, 0}, {"Reverb", 0, 100, 55},
@@ -37,8 +37,9 @@ static const fm_param_t PARAMS[P_NPARAMS] = {
     {"User mi", -50, 50, 0}, {"User fa", -50, 50, 0}, {"User fa#", -50, 50, 0}, {"User sol", -50, 50, 0},
     {"User 4", -50, 50, 0}, {"User la", -50, 50, 0}, {"User tib", -50, 50, 0}, {"User ti", -50, 50, 0},
     {"User do", -50, 50, 0}, {"User do#", -50, 50, 0}, {"User re", -50, 50, 0}, {"User 11", -50, 50, 0},
-    {"Loop BPM", 30, 120, 60}, {"Loop beats", 8, 64, 32}, {"Click", 0, 1, 0},
-    {"Pair gap", 30, 50, 42}, {"Ta level", 30, 100, 64}, {"First", 100, 127, 127}, {"Jitter", 0, 20, 5}, {"Oroshi", 0, 3, 0},
+    {"Loop BPM", 20, 240, 60}, {"Loop beats", 4, 256, 32}, {"Click", 0, 1, 0},      /* 1.1.0: up to twelve minutes, the knob
+                                                                                        * moves the beats four at a time (ui.c) */
+    {"Pair gap", 30, 50, 42}, {"Ta level", 30, 100, 64}, {"First", 100, 127, 127}, {"Jitter", 0, 20, 5}, {"Oroshi", 0, 3, ORO_LONG},
 };
 const fm_param_t *fm_param_info(int p) { return (p >= 0 && p < P_NPARAMS) ? &PARAMS[p] : &PARAMS[0]; }
 

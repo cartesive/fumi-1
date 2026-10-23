@@ -125,7 +125,13 @@ static void turn(int role, int p, int32_t e)
     if (!e || p == K_NONE)
         return;
     pi = fm_param_info(p);
-    knob_set(p, proj.par[p] + accel(role, e, pi->hi - pi->lo));
+    e = accel(role, e, pi->hi - pi->lo);
+    if (p == P_LOOP_BEATS) {                       /* four beats a detent (1.1.0: 4..256), landing on a multiple of four */
+        int32_t v = proj.par[p] + 4 * e;
+        knob_set(p, (int)((v + (v < 0 ? -2 : 2)) / 4 * 4));
+        return;
+    }
+    knob_set(p, proj.par[p] + e);
 }
 
 static void toggle(int p, const char *what)

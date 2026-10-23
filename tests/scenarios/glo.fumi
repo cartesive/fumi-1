@@ -15,7 +15,7 @@ expect view 5
 expect par16 0
 spin K1 -10
 spin K2 -5
-spin K4 2
+spin K4 -1
 wait 50
 expect par15 90
 expect par44 37

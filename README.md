@@ -18,7 +18,7 @@ FuMi lives in `firmware/src/app/` and `firmware/src/dsp/`.
 
 <img src="docs/img/screen-home.png" width="240" height="240" alt="FuMi-1's HOME screen: 1本, A3, SUIKO tuning, the in scale, and the koto 琴 large"> <img src="docs/img/screen-loop.png" width="240" height="240" alt="FuMi-1 overdubbing a loop: the DUB tag and the loop bar under the keys">
 
-**Status (12 Oct 2026):** version 1.0.7 (identity `FM-1_7010007`). It has run on one FM-1, the author's,
+**Status (23 Oct 2026):** version 1.1.0 (identity `FM-1_7010100`). It has run on one FM-1, the author's,
 since 0.1. What works: the pitch core and the measured tuning, twenty-one instruments with their names in
 kanji, the bends, the seven ornament keys (the koto's left hand among them), vibrato, the trill in pairs
 with oroshi, 余韻, mono with slide, the voicing stages, reverb, MIDI in with velocity and MIDI out, the
@@ -101,8 +101,11 @@ played, nothing is quantised.
   REC tap while the loop plays: overdub on; again: off. Each overdub is a layer.
 - **PLAY** tap: stop, or start from the top. PLAY held a second: undo the last layer. REC held a second:
   clear the loop (the screen asks you to keep holding).
-- **ENV** is the Loop page: BPM 30–120, length 8–64 beats, and a quiet click on the beat, off by default.
-  The ruler only decides where the loop ends by itself and where the click falls.
+- **ENV** is the Loop page: BPM 20–240, length 4–256 beats (the knob moves four at a time), and a quiet click
+  on the beat, off by default. The ruler only decides where the loop ends by itself and where the click falls.
+  At 20 BPM and 256 beats a loop runs twelve minutes. The store holds 1024 events across all layers, about 490
+  notes: a long loop is a sparse one, and once the store is full further presses are not recorded. A loop is
+  never shorter than one beat: closing it early with REC stretches it to the beat (three seconds at 20 BPM).
 - Recorded: the keys, the ornament keys and the bend buttons, with their timing. Not recorded: knob moves,
   the LFO, ARP and GLO buttons, and MASTER, so your left hand shapes the level of everything live.
 - The loop stores keys, not pitches: change 本数 or the tuning while it plays and the loop follows. Notes
@@ -150,13 +153,16 @@ ornament mode while it is held) plays the way a hand does: in pairs.
 - **Accents.** The first stroke of a trill, the *KA*, is the hardest (velocity 127, plus 1.5 dB). Each *ta* is
   light (velocity 64, minus 4 dB), each later *ka* normal. Every stroke differs a little from the last.
   The strong-pluck ornament key plays the same hard stroke, which now makes a difference.
-- **Trill rate** on HOME sets the average stroke rate, as before. **Trill feel** (hold GLO) is one knob from 0,
-  the even machine of the ST-50 with identical strokes, to 100, the full pairs and accents.
+- **Trill rate** on HOME sets the average stroke rate, as before; it starts at 85 (1.1.0; 50 before). **Trill
+  feel** (hold GLO) is one knob from 0, the even machine of the ST-50 with identical strokes, to 100, the full
+  pairs and accents.
 - **The Trill pages** (hold GLO; hold again for the second page) keep the defaults behind the feel knob: pair
   gap, ta level, first stroke, jitter, and oroshi. They are saved with the setup. Pair gap and ta level read
   as words, Even to Tight and Same to Faint, the bar beneath keeping the exact position (1.0.7).
 - **Oroshi** (颪, the drum roll that starts slow and speeds up) is a setting for the trill *ornament key*: None,
-  Short, Medium or Long, the length of the run from slow to the trill rate (about 1.5, 3 and 5 seconds).
+  Short, Medium or Long, the length of the run from slow to the trill rate (about 1.5, 3 and 5 seconds). It
+  starts at Long (1.1.0; None before). A setup saved by an earlier version that was still at the old trill rate
+  and oroshi takes the new ones when it loads; one set away from them keeps its own.
   With it set, holding the ornament key starts the trill at about a quarter of the rate and each gap is
   shorter than the last by a constant ratio until it arrives; the first stroke is still the hard *KA*, and the
   pairs and the lighter *ta* come in as it speeds up. Pressing the ornament key again starts it from slow; a

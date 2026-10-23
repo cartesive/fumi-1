@@ -11,7 +11,8 @@ wait 100
 expect par7 18
 expect par15 100
 expect par44 42
-expect par48 0
+expect par48 3
+expect par14 85
 # what this version saves loads as it is
 spin PRESET -1
 tap SAVE
@@ -33,3 +34,18 @@ store_v3 0
 reboot
 wait 100
 expect par7 0
+# 1.1.0 moved the trill's start to 85 and the ornament key's oroshi to Long: a setup still at the old defaults (50, None)
+# takes the new ones, in any older format; a setup set away from them keeps its own values
+expect par14 85
+expect par48 3
+store_v4 50 0
+reboot
+wait 100
+expect par14 85
+expect par48 3
+expect par41 60
+store_v4 60 1
+reboot
+wait 100
+expect par14 60
+expect par48 1

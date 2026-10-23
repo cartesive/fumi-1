@@ -33,6 +33,16 @@ tap ENV
 wait 50
 expect view 4
 shot loop.png
+# the beats knob moves four at a time (1.1.0: 4..256), and lands on a multiple of four
+spin K2 1
+wait 50
+expect par42 36
+spin K2 -2
+wait 50
+expect par42 28
+spin K2 1
+wait 50
+expect par42 32
 press PLAY
 wait 1200
 release PLAY

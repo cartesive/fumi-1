@@ -25,6 +25,7 @@
  *           custom peak_db_max peak_db_min screen loop_state loop_len loop_pos loop_layers loop_events
  *   reboot                       re-run boot from the simulated flash (persistence test)
  *   store_v2 VOICE | store_v3 VOICE   an older project (format 2 / 3) on instrument VOICE, for the migration
+ *   store_v4 RATE OROSHI              a 1.0.8 (format 4) project with that trill rate and oroshi (1.1.0 moved the defaults)
  */
 #define OM_HOST 1
 #define FM_HOST 1
@@ -575,6 +576,8 @@ int main(int argc, char **argv)
                     v = (int16_t)atoi(a);
                 else if (i == P_TRILL_VAR)
                     v = 30;                       /* Trill var's old default */
+                else if (i == P_TRILL_RATE)
+                    v = 50;                       /* the trill rate's default before 1.1.0 */
                 memcpy(raw + 8 + 2 * i, &v, 2);
             }
             raw[8 + 2 * PROJ_NPAR_V2] = 1;
@@ -588,8 +591,22 @@ int main(int argc, char **argv)
             for (i = 0; i < P_NPARAMS; i++)
                 p3.par[i] = (int16_t)fm_param_info((int)i)->def;
             p3.par[P_VOICE] = (int16_t)atoi(a);
+            p3.par[P_TRILL_RATE] = 50;            /* the defaults before 1.1.0 */
+            p3.par[P_TRILL_OROSHI] = ORO_NONE;
             p3.leds = 1;
             plat_store_save(OBJ_PROJ, &p3, sizeof p3);
+        } else if (!strcmp(cmd, "store_v4")) {        /* store_v4 RATE OROSHI: a 1.0.8 (format 4) project with that trill rate and oroshi */
+            project_t p4;
+            uint32_t i;
+            memset(&p4, 0, sizeof p4);
+            p4.magic = PROJ_MAGIC;
+            p4.format = 4;
+            for (i = 0; i < P_NPARAMS; i++)
+                p4.par[i] = (int16_t)fm_param_info((int)i)->def;
+            p4.par[P_TRILL_RATE] = (int16_t)atoi(a);
+            p4.par[P_TRILL_OROSHI] = (int16_t)atoi(b);
+            p4.leds = 1;
+            plat_store_save(OBJ_PROJ, &p4, sizeof p4);
         } else if (!strcmp(cmd, "echo"))
             printf("%s", line + 5);
         else {

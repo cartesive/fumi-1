@@ -494,6 +494,7 @@ int main(void)
         fm_set(P_REVERB, 0);
         fm_set(P_LEVEL, 60);
         fm_set(P_TRILL_RATE, 50);
+        fm_set(P_TRILL_OROSHI, ORO_NONE);         /* the plain trill (the default is Long since 1.1.0) */
         run(0, 256);
         fm_key(5, 1);
         run(0, 22016);                            /* the crack long over when the ornament key comes: it strikes again */
@@ -1332,5 +1333,12 @@ int main(void)
     fm_panic();
     run(0, 256);
     CHECK("panic: quiet", fm_nvoices == 0);
+
+    /* 1.1.0: the loop's ruler reaches 20..240 BPM and 4..256 beats (a loop of up to twelve minutes, sparse: 1024 events);
+     * the trill starts at 85 and the ornament key's oroshi at Long, as the owner plays */
+    CHECK("Loop BPM 20..240, default 60", fm_param_info(P_LOOP_BPM)->lo == 20 && fm_param_info(P_LOOP_BPM)->hi == 240 && fm_param_info(P_LOOP_BPM)->def == 60);
+    CHECK("Loop beats 4..256, default 32", fm_param_info(P_LOOP_BEATS)->lo == 4 && fm_param_info(P_LOOP_BEATS)->hi == 256 && fm_param_info(P_LOOP_BEATS)->def == 32);
+    CHECK("Trill rate default 85", fm_param_info(P_TRILL_RATE)->def == 85);
+    CHECK("Oroshi default Long", fm_param_info(P_TRILL_OROSHI)->def == ORO_LONG);
     return tu_done("fumi");
 }

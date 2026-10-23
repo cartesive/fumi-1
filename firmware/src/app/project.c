@@ -35,6 +35,16 @@ static int project_valid(void)
  * (1.0.6, 1.0.7) instrument number, by name, in the new order */
 static const uint8_t VOICE_V3_TO_V4[14] = {0, 1, 13, 10, 12, 11, 14, 18, 19, 20, 2, 3, 4, 5};
 
+/* 1.1.0 starts the trill at 85 and the ornament key's oroshi at Long (it was 50 and None): a setup still at those old
+ * defaults takes the new ones, one set away from them keeps its own. Every older format passes through here. */
+static void project_trill_1_1(void)
+{
+    if (proj.par[P_TRILL_RATE] == 50)
+        proj.par[P_TRILL_RATE] = fm_param_info(P_TRILL_RATE)->def;
+    if (proj.par[P_TRILL_OROSHI] == ORO_NONE)
+        proj.par[P_TRILL_OROSHI] = fm_param_info(P_TRILL_OROSHI)->def;
+}
+
 /* a format-2 project (1.0.4, 1.0.5): the same parameters up to the looper's; Kokyu was put before Taiko, so an
  * instrument from Taiko on moves up one, and then the 1.0.8 renumbering; Trill var became Trill feel (a new meaning:
  * its new default); the trill's defaults are new */
@@ -53,6 +63,7 @@ static int project_migrate(const uint8_t *raw, int n)
     proj.par[P_VOICE] = VOICE_V3_TO_V4[proj.par[P_VOICE]];
     proj.par[P_TRILL_VAR] = fm_param_info(P_TRILL_VAR)->def;
     proj.leds = raw[8 + 2 * PROJ_NPAR_V2];
+    project_trill_1_1();
     return project_valid();
 }
 
@@ -66,6 +77,18 @@ static int project_migrate_v3(const uint8_t *raw, int n)
     if (proj.par[P_VOICE] < 0 || proj.par[P_VOICE] >= 14)
         return 0;
     proj.par[P_VOICE] = VOICE_V3_TO_V4[proj.par[P_VOICE]];
+    project_trill_1_1();
+    return project_valid();
+}
+
+/* a format-4 project (1.0.8): the same parameters; the trill's old defaults become the new ones */
+static int project_migrate_v4(const uint8_t *raw, int n)
+{
+    if (n < (int)sizeof proj)
+        return 0;
+    memcpy(&proj, raw, sizeof proj);
+    proj.format = PROJ_FORMAT;
+    project_trill_1_1();
     return project_valid();
 }
 
@@ -86,6 +109,8 @@ int project_load(void)
         } else if (magic == PROJ_MAGIC && format == 2u && project_migrate(raw, n)) {
             return 0;
         } else if (magic == PROJ_MAGIC && format == 3u && project_migrate_v3(raw, n)) {
+            return 0;
+        } else if (magic == PROJ_MAGIC && format == 4u && project_migrate_v4(raw, n)) {
             return 0;
         }
     }

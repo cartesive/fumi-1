@@ -3,6 +3,19 @@
 Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 reports the identity
 (`python3 tools/fm1_install.py --info`).
 
+## 1.1.0 (23 Oct 2026) — `FM-1_7010100`
+
+- **The loop's ruler reaches further**: BPM 20–240 (was 30–120), length 4–256 beats (was 8–64), the beats knob
+  moving four at a time and landing on a multiple of four. At 20 BPM and 256 beats a loop runs twelve minutes.
+  Nothing else changed: the store still holds 1024 events across all layers, about 490 notes (a long loop is a
+  sparse one, and a full store takes no more presses), and a loop closed early with REC is still stretched to
+  one beat, three seconds at 20 BPM. The counters are 32-bit block counts, far from any limit.
+- **The trill starts at 85 and the ornament key's oroshi at Long** (they were 50 and None), the way the owner
+  plays. New defaults are a new setup format (PROJ_FORMAT 5): a setup saved by any earlier version that was
+  still at the old trill rate or the old oroshi takes the new value; one set away from them keeps its own.
+  A 1.0.4 to 1.0.8 setup loads through its own migration first (the instrument by name, as before).
+- The voices are unchanged, so no new SoundFont: `FuMi-1.0.8.sf2` on the 1.0.8 release stays the SoundFont.
+
 ## 1.0.8 (22 Oct 2026) — `FM-1_7010008`
 
 - **Seven more voices**, the owner's picks from community banks on patches.fm: Chimes チャイム (CHIMES 1), Rin 鈴
