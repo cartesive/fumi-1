@@ -14,6 +14,14 @@ Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 re
   plays. New defaults are a new setup format (PROJ_FORMAT 5): a setup saved by any earlier version that was
   still at the old trill rate or the old oroshi takes the new value; one set away from them keeps its own.
   A 1.0.4 to 1.0.8 setup loads through its own migration first (the instrument by name, as before).
+- **The loop survives power-off.** A stopped loop is written to flash by the autosave (four seconds quiet, nothing
+  sounding, nothing touched), as an image of its events, its length and its layers' packed instruments, and restored
+  stopped at boot before the audio starts; a cleared loop is written as empty; a playing loop is not written. The
+  image (up to 9.5 KB) is too big for the platform's 3.8 KB objects, so it has an A/B pair of three sectors each of
+  its own at 0xD6000 and 0xD9000, just below the panel calibration inside Felucca's data window, written with the
+  platform's own hooks and commit record (`plat_loop_save` / `plat_loop_load` in plat_fm1.c; storage.c untouched).
+  While the main loop copies the image the loop's own taps wait in the queue.
+- **The Loop page shows the ruler's length as a time** (m:ss) in its fourth slot.
 - The voices are unchanged, so no new SoundFont: `FuMi-1.0.8.sf2` on the 1.0.8 release stays the SoundFont.
 
 ## 1.0.8 (22 Oct 2026) — `FM-1_7010008`

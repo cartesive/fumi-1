@@ -87,6 +87,81 @@ void fm_midi_out(uint32_t st, uint32_t d1, uint32_t d2) { plat_midi_out(st >> 4 
 int plat_store_load(uint32_t obj, void *dst, uint32_t max) { return flash_ok ? st_load(obj, dst, max) : -1; }
 int plat_store_save(uint32_t obj, const void *src, uint32_t len) { return flash_ok ? st_save(obj, src, len) : -9; }
 
+/* the loop's object (plat.h): storage.c's A/B scheme over three sectors a copy. A save erases the copy not in charge,
+ * programs the payload from offset 256 in pages, then the header, and reads everything back; on load the valid copy with
+ * the higher seq wins, the other if its payload fails its CRC. */
+#define LOOP_SECTORS 3u
+#define LOOP_TYPE 0x4C50u                               /* "LP": not an OBJ_* of storage.c */
+static uint32_t loop_base(int copy) { return copy ? 0xD9000u : 0xD6000u; }
+static int loop_head(int copy, st_hdr_t *h)
+{
+    if (st_read(loop_base(copy), h, sizeof *h))
+        return -1;
+    return h->magic == ST_MAGIC && h->type == LOOP_TYPE && h->len <= PLAT_LOOP_MAX && h->hcrc == st_crc32(h, sizeof *h - 4u) ? 0 : -1;
+}
+static int loop_heads(st_hdr_t *h, int *ok)              /* the copy in charge by its header: 0 / 1, or -1 for none */
+{
+    ok[0] = loop_head(0, &h[0]) == 0;
+    ok[1] = loop_head(1, &h[1]) == 0;
+    return ok[0] && ok[1] ? (h[1].seq > h[0].seq) : ok[1] ? 1 : ok[0] ? 0 : -1;
+}
+int plat_loop_load(void *dst, uint32_t max)
+{
+    st_hdr_t h[2];
+    int ok[2], cur, k;
+    if (!flash_ok || (cur = loop_heads(h, ok)) < 0)
+        return -1;
+    for (k = 0; k < 2; k++) {                            /* the copy in charge, else the other */
+        int copy = cur ^ k;
+        if (!ok[copy] || h[copy].len > max)
+            continue;
+        if (st_read(loop_base(copy) + ST_PAYLOAD_OFF, dst, h[copy].len) == 0 && st_crc32(dst, h[copy].len) == h[copy].crc)
+            return (int)h[copy].len;
+    }
+    return -1;
+}
+int plat_loop_save(const void *src, uint32_t len)
+{
+    st_hdr_t h[2], w, chk;
+    int ok[2], cur, copy, rc;
+    uint32_t base, off;
+    if (!flash_ok || len > PLAT_LOOP_MAX)
+        return -1;
+    cur = loop_heads(h, ok);
+    copy = cur == 0 ? 1 : 0;
+    base = loop_base(copy);
+    for (off = 0; off < LOOP_SECTORS * 4096u; off += 4096u)
+        if ((rc = st_erase(base + off)) != 0)
+            return rc;
+    for (off = 0; off < len; off += 256u) {
+        uint32_t n = len - off > 256u ? 256u : len - off;
+        if ((rc = st_prog(base + ST_PAYLOAD_OFF + off, (const uint8_t *)src + off, n)) != 0)
+            return rc;
+    }
+    w.magic = ST_MAGIC;
+    w.type = (uint16_t)LOOP_TYPE;
+    w.slot = (uint16_t)copy;
+    w.seq = (cur < 0 ? 0u : h[cur].seq) + 1u;
+    w.len = len;
+    w.crc = st_crc32(src, len);
+    w.rsv[0] = w.rsv[1] = 0xFFFFFFFFu;
+    w.hcrc = st_crc32(&w, sizeof w - 4u);
+    if ((rc = st_prog(base, &w, sizeof w)) != 0)         /* the commit record, last */
+        return rc;
+    if (loop_head(copy, &chk) || chk.seq != w.seq || chk.crc != w.crc)
+        return -7;
+    for (off = 0; off < len; off += 256u) {              /* read back: a failing part must not report saved */
+        uint8_t pg[256];
+        uint32_t n = len - off > 256u ? 256u : len - off, i;
+        if (st_read(base + ST_PAYLOAD_OFF + off, pg, n))
+            return -7;
+        for (i = 0; i < n; i++)
+            if (pg[i] != ((const uint8_t *)src)[off + i])
+                return -7;
+    }
+    return 0;
+}
+
 static volatile uint32_t audio_cpu_pct, audio_xruns;
 uint32_t plat_cpu_pct(void) { return audio_cpu_pct; }
 uint32_t plat_xruns(void) { return audio_xruns; }

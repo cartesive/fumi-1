@@ -57,6 +57,7 @@ static struct {
     uint8_t tuning_prev;               /* the 純正律 to come back to after a tap to 平均律 */
     uint8_t dirty;
     uint32_t act_t, saved_t;
+    uint32_t loop_gen;                 /* the loop's generation last saved (fm_loop_gen) */
     char msg[2][24];
     uint32_t msg_until;
     int8_t touched;
@@ -612,8 +613,15 @@ static void draw_knobs(void)
         int32_t x = (int32_t)i * 60, cx = x + 30, bw;
         int hot = now_touch && ui.touched == (int)i;
         char t[16];
-        if (p == K_NONE)
+        if (p == K_NONE) {
+            if (ui.view == V_LOOP && i == 3) {     /* the ruler's length as a time (1.1.0): twelve minutes read as 12:00 */
+                cv_rect(x, 14, 1, KNB_H - 30, K_LINE);
+                text_c(cx, 6, &FONT_XS, "Length", K_DIM);
+                fm_loop_ruler_text(proj.par[P_LOOP_BPM], proj.par[P_LOOP_BEATS], t);
+                text_c(cx, 22, &FONT_M, t, K_TEXT);
+            }
             continue;
+        }
         pi = fm_param_info(p);
         lo = pi->lo;
         hi = pi->hi;
@@ -681,10 +689,17 @@ static void leds(void)
 static void autosave(void)
 {
     uint32_t now = plat_ms();
-    if (!ui.dirty || ui.btn || ui.keys || now - ui.act_t < AUTOSAVE_QUIET || fm_nvoices)
+    if (ui.btn || ui.keys || now - ui.act_t < AUTOSAVE_QUIET || fm_nvoices)
         return;
     if (fm_loop_state != LP_IDLE && fm_loop_state != LP_STOP)
         return;                                    /* the loop is running: a flash erase would silence it */
+    if (fm_loop_gen != ui.loop_gen) {              /* the loop, stopped and changed: its own object (1.1.0), one erase a pass */
+        if (loop_save() == 0)
+            ui.loop_gen = fm_loop_gen;
+        return;
+    }
+    if (!ui.dirty)
+        return;
     if (project_save() == 0) {
         ui.dirty = 0;
         ui.saved_t = now;
@@ -696,6 +711,7 @@ void ui_init(void)
     memset(&ui, 0, sizeof ui);
     ui.touched = -1;
     ui.tuning_prev = TN_SUIKO;
+    ui.loop_gen = fm_loop_gen;                     /* what loop_load brought back is saved already */
     lcd_fill(0, 0, 240, 240, K_BG);
 }
 

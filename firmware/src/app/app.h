@@ -29,6 +29,8 @@ void project_defaults(void);
 int project_load(void);                  /* 0 = loaded; else defaults are in place */
 int project_save(void);                  /* 0 = saved and verified */
 void project_apply(void);                /* every value to the engine (boot, load) */
+int loop_load(void);                     /* the loop back from its flash object, stopped (boot); 0 = restored */
+int loop_save(void);                     /* the stopped loop's image to flash; 0 = saved and verified */
 
 void ui_init(void);
 void ui_frame(void);

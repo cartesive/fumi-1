@@ -284,6 +284,7 @@ static void fm1_main(void)
     fm_init();
     project_load();                                 /* defaults when nothing (or another format) is saved */
     project_apply();
+    loop_load();                                    /* the loop as it was stopped last time (1.1.0), before the audio runs */
     audio_init();
     usb_start();
 #if OM_TRS

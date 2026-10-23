@@ -1340,5 +1340,85 @@ int main(void)
     CHECK("Loop beats 4..256, default 32", fm_param_info(P_LOOP_BEATS)->lo == 4 && fm_param_info(P_LOOP_BEATS)->hi == 256 && fm_param_info(P_LOOP_BEATS)->def == 32);
     CHECK("Trill rate default 85", fm_param_info(P_TRILL_RATE)->def == 85);
     CHECK("Oroshi default Long", fm_param_info(P_TRILL_OROSHI)->def == ORO_LONG);
+    {   /* 1.1.0: the ruler's length as the Loop page prints it */
+        char t[16];
+        fm_loop_ruler_text(60, 32, t);
+        CHECK("ruler 32 beats at 60 BPM reads 0:32", !strcmp(t, "0:32"));
+        fm_loop_ruler_text(20, 256, t);
+        CHECK("ruler 256 beats at 20 BPM reads 12:48", !strcmp(t, "12:48"));
+        fm_loop_ruler_text(240, 4, t);
+        CHECK("ruler 4 beats at 240 BPM reads 0:01", !strcmp(t, "0:01"));
+    }
+    {   /* 1.1.0: the loop as an image for the app's flash object, and back. A loop recorded in Koto II and stopped
+         * is imaged; the engine restarts on Taiko; restored, the loop is back stopped with its events and length,
+         * and its layer still plays Koto II */
+        static uint8_t img[16384];
+        uint32_t n, len, ev, k, gen;
+        int found = 0;
+        double l_loop, c_loop, l_live, c_live;
+        fm_init();
+        fm_set(P_VOICE, 1);                       /* Koto II */
+        fm_set(P_REVERB, 0);
+        fm_set(P_YOIN, 0);
+        fm_set(P_LEVEL, 60);
+        fm_set(P_LOOP_BPM, 120);
+        fm_set(P_LOOP_BEATS, 8);
+        run(0, 256);
+        CHECK("an empty loop's image is a header alone", fm_loop_image(img, sizeof img) == 16);
+        CHECK("and restores to an empty loop", fm_loop_restore(img, 16) == 0 && fm_loop_state == LP_IDLE);
+        gen = fm_loop_gen;
+        fm_loop_rec();
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 11008);
+        fm_key(5, 0);
+        run(0, 11008);
+        fm_loop_rec();                            /* closed: it plays */
+        run(0, 256);
+        CHECK("a playing loop gives no image", fm_loop_state == LP_PLAY && fm_loop_image(img, sizeof img) == 0);
+        CHECK("the close moved the loop's generation", fm_loop_gen != gen);
+        fm_loop_play();                           /* stopped */
+        run(0, 256);
+        CHECK("stopped", fm_loop_state == LP_STOP);
+        len = fm_loop_len;
+        ev = fm_loop_events;
+        n = fm_loop_image(img, sizeof img);
+        CHECK("the image: the header, the layer's slot, one packed instrument, the events", n == 16u + 1u + 128u + 8u * ev);
+        for (k = 0; k + 128 <= n; k++)
+            if (!memcmp(img + k, fm_patch_builtin(1), 128))
+                found = 1;
+        CHECK("the image carries the layer's instrument, Koto II, packed", found);
+        CHECK("an image too big for the buffer is refused", fm_loop_image(img, 100) == 0);
+        fm_init();
+        fm_set(P_VOICE, slot_of("Taiko"));
+        fm_set(P_REVERB, 0);
+        fm_set(P_YOIN, 0);
+        fm_set(P_LEVEL, 60);
+        run(0, 256);
+        img[6] ^= 0x80;                           /* a damaged image: refused, the loop stays empty */
+        CHECK("a damaged image is refused", fm_loop_restore(img, n) != 0 && fm_loop_state == LP_IDLE);
+        img[6] ^= 0x80;
+        CHECK("restored", fm_loop_restore(img, n) == 0);
+        run(0, 256);
+        CHECK("back stopped, with its length, events and layer", fm_loop_state == LP_STOP && fm_loop_len == len && fm_loop_events == ev && fm_loop_layers == 1);
+        fm_loop_play();                           /* the loop's pluck starts with the window, as the live one will */
+        run(0, 11008);
+        CHECK("it plays", fm_loop_state == LP_PLAY);
+        l_loop = db(rms_of(0, 11008));
+        c_loop = centroid(0, 2646);
+        fm_loop_clear();
+        run(0, 44032);
+        fm_set(P_VOICE, 1);                       /* the same pluck live, in Koto II */
+        run(0, 256);
+        fm_key(5, 1);
+        run(0, 11008);
+        l_live = db(rms_of(0, 11008));
+        c_live = centroid(0, 2646);
+        fm_key(5, 0);
+        run(0, 44032);
+        printf("  restored loop: %.1f dB, centroid %.0f Hz; the pluck live in Koto II: %.1f dB, %.0f Hz\n", l_loop, c_loop, l_live, c_live);
+        CHECK("the restored layer plays its own instrument, Koto II, though PRESETS is on Taiko",
+              fabs(l_loop - l_live) < 1.0 && fabs(c_loop - c_live) < 0.1 * c_live);
+    }
     return tu_done("fumi");
 }

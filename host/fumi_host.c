@@ -136,6 +136,30 @@ int plat_store_save(uint32_t obj, const void *src, uint32_t len)
     return 0;
 }
 
+/* the loop's object (1.1.0): one buffer, kept across a simulated reboot */
+static uint8_t loop_store[PLAT_LOOP_MAX];
+static int loop_store_len = -1;
+static uint32_t loop_writes;
+int plat_loop_load(void *dst, uint32_t max)
+{
+    int n = loop_store_len;
+    if (n < 0)
+        return -1;
+    if ((uint32_t)n > max)
+        n = (int)max;
+    memcpy(dst, loop_store, (size_t)n);
+    return n;
+}
+int plat_loop_save(const void *src, uint32_t len)
+{
+    if (len > PLAT_LOOP_MAX)
+        return -1;
+    memcpy(loop_store, src, len);
+    loop_store_len = (int)len;
+    loop_writes++;
+    return 0;
+}
+
 static uint32_t cpu_pct;
 uint32_t plat_cpu_pct(void) { return cpu_pct; }
 uint32_t plat_xruns(void) { return 0; }
@@ -298,6 +322,7 @@ static void boot(void)
     fm_init();
     project_load();
     project_apply();
+    loop_load();
     lcd_fill(0, 0, 240, 240, 0);
     ui_init();
 }
@@ -375,6 +400,8 @@ static int expect(const char *what, const char *val)
         got = ui.dirty;
     else if (!strcmp(what, "store_writes"))
         got = (int)store_writes;
+    else if (!strcmp(what, "loop_writes"))
+        got = (int)loop_writes;
     else if (!strcmp(what, "midi_out"))
         got = (int)midi_out_count;
     else if (!strcmp(what, "nvoices"))

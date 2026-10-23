@@ -75,6 +75,16 @@ void fm_loop_undo(void);                         /* PLAY held: the top layer goe
 void fm_loop_clear(void);                        /* REC held */
 extern volatile uint8_t fm_loop_state, fm_loop_layers;                /* LP_*, layers recorded */
 extern volatile uint32_t fm_loop_pos, fm_loop_len, fm_loop_events;   /* position and length in blocks of 32; events */
+/* the loop as an image for the app's flash object (1.1.0): the events, the layers' instruments, the length.
+ * fm_loop_image: main loop, with the loop stopped or empty: the bytes written, or 0 (the loop is running, or no room;
+ * the loop's commands wait while it copies). fm_loop_restore: at boot, before anything has played: the loop back,
+ * stopped; 0 = ok, else the image is refused and nothing changes. fm_loop_gen moves whenever the loop's content
+ * changed (closed, an overdub ended, undone, cleared, restored): the app saves when it has moved and the loop is stopped. */
+#define FM_LOOP_IMAGE_MAX (16u + 255u + 8u * 128u + 1024u * 8u)    /* the header, 255 layers, 8 instruments, 1024 events */
+uint32_t fm_loop_image(uint8_t *dst, uint32_t max);
+int fm_loop_restore(const uint8_t *src, uint32_t n);
+extern volatile uint32_t fm_loop_gen;
+void fm_loop_ruler_text(int bpm, int beats, char *b);   /* beats x 60 / BPM as m:ss (8 bytes): the Loop page's Length */
 
 void fm_patch_set(const uint8_t *packed128);     /* the current patch (a DX7-format packed voice) */
 void fm_patch_get(uint8_t *packed128);           /* main loop: the patch the render uses */

@@ -1,0 +1,59 @@
+# the loop survives power-off (1.1.0): a stopped loop is saved a few seconds later, when nothing sounds and nothing is
+# touched, and comes back stopped at the next boot; a cleared loop is saved as empty; a loop left playing is not saved
+wait 300
+tap REC
+wait 50
+key w5 down
+wait 400
+key w5 up
+wait 1200
+tap REC
+wait 50
+expect loop_state 3
+expect loop_writes 0
+wait 5000
+expect loop_writes 0
+tap PLAY
+wait 50
+expect loop_state 5
+wait 5000
+expect loop_writes 1
+reboot
+wait 100
+expect loop_state 5
+expect loop_layers 1
+expect loop_events 2
+tap PLAY
+wait 200
+expect loop_state 3
+expect nvoices 1
+tap PLAY
+wait 50
+# an overdub, stopped: saved again with both layers
+tap REC
+wait 50
+key w7 down
+wait 300
+key w7 up
+wait 200
+tap REC
+wait 50
+tap PLAY
+wait 5000
+expect loop_writes 2
+reboot
+wait 100
+expect loop_layers 2
+expect loop_events 4
+# cleared: the empty loop is saved, and nothing comes back
+press REC
+wait 1200
+release REC
+wait 50
+expect loop_state 0
+wait 5000
+expect loop_writes 3
+reboot
+wait 100
+expect loop_state 0
+expect loop_layers 0

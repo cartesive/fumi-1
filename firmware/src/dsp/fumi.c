@@ -645,6 +645,8 @@ static lp_ev_t lp_ev[LP_NEV] FM_POOL;
 static uint32_t lp_n, lp_len, lp_pos, lp_next, lp_max, lp_keys_down, lp_other_down, lp_orn_on;
 #define LP_ROOM 36u                               /* a press is taken only with room for every release: 27 keys, 7 ornaments, 2 bends */
 static uint8_t lp_state, lp_layer, lp_click_on;
+volatile uint32_t fm_loop_gen;                    /* the loop's content changed (fm_loop_image / the app's save) */
+static volatile uint8_t lp_hold, lp_busy;         /* the main loop is copying the loop: its commands wait in the queue */
 #define LP_NOSLOT 0xFFu
 static uint8_t lp_lslot[256];                     /* the instrument of each layer: a slot of ps; LP_NOSLOT until its first event */
 static int lp_slot_of(uint8_t layer) { return lp_lslot[layer] == LP_NOSLOT ? 0 : lp_lslot[layer]; }
@@ -812,6 +814,7 @@ static void lp_close(void)                        /* the loop is as long as what
     lp_pos = lp_next = 0;
     lp_click_at = 0.0f;
     lp_state = LP_PLAY;
+    fm_loop_gen++;
 }
 
 static void lp_clear(void)
@@ -821,6 +824,7 @@ static void lp_clear(void)
     lp_state = LP_IDLE;
     lp_release_notes();
     lp_quiet();
+    fm_loop_gen++;
 }
 
 static void lp_dub_off(void)
@@ -829,6 +833,7 @@ static void lp_dub_off(void)
     if (lp_layer_empty(lp_layer))
         lp_layer--;
     lp_state = LP_PLAY;
+    fm_loop_gen++;
 }
 
 static void lp_cmd(int what)
@@ -897,8 +902,10 @@ static void lp_cmd(int what)
         lp_quiet();
         if (lp_layer == 0)
             lp_clear();
-        else
+        else {
             lp_seek();
+            fm_loop_gen++;
+        }
         break;
     }
     case LC_CLEAR: lp_clear(); break;
@@ -979,6 +986,144 @@ static void lp_block(void)                        /* every block, before the voi
     fm_loop_pos = lp_pos;
     fm_loop_len = lp_len;
     fm_loop_events = lp_n;
+}
+
+/* the loop's image (fumi.h): "FuLp", version 1, layers, events (16 bit), length (32 bit), the slots in use as bits
+ * 1..8, three spare; then each layer's slot, each used slot's packed instrument, each event as t (32 bit) c a b layer.
+ * Only the slots the layers name are kept (a tail's slot is not). The codes c are the engine's own (C_KEY, C_ORN,
+ * C_BEND), so the image is this engine's and version 1 says so. */
+typedef char lp_image_max_fits[FM_LOOP_IMAGE_MAX >= 16u + 255u + LP_NPAT * FM6_PACKED + LP_NEV * 8u ? 1 : -1];
+static void lp_put32(uint8_t *d, uint32_t v) { d[0] = (uint8_t)v; d[1] = (uint8_t)(v >> 8); d[2] = (uint8_t)(v >> 16); d[3] = (uint8_t)(v >> 24); }
+static uint32_t lp_get32(const uint8_t *s) { return (uint32_t)s[0] | (uint32_t)s[1] << 8 | (uint32_t)s[2] << 16 | (uint32_t)s[3] << 24; }
+
+uint32_t fm_loop_image(uint8_t *dst, uint32_t max)
+{
+    uint32_t n = 16, k, s, used = 0, spin;
+    lp_hold = 1;
+    BARRIER();
+    for (spin = 0; spin < 4000000u && lp_busy; spin++)   /* a loop command in the render finishes within the block */
+        ;
+    if (lp_state != LP_IDLE && lp_state != LP_STOP) {
+        lp_hold = 0;
+        return 0;
+    }
+    for (k = 1; k <= lp_layer; k++)
+        if (lp_lslot[k] != LP_NOSLOT && lp_lslot[k] != 0)
+            used |= 1u << lp_lslot[k];
+    for (s = 1; s <= LP_NPAT; s++)
+        if (used >> s & 1u)
+            n += FM6_PACKED;
+    n += lp_layer + lp_n * 8u;
+    if (n > max) {
+        lp_hold = 0;
+        return 0;
+    }
+    dst[0] = 'F'; dst[1] = 'u'; dst[2] = 'L'; dst[3] = 'p';
+    dst[4] = 1;
+    dst[5] = lp_layer;
+    dst[6] = (uint8_t)lp_n;
+    dst[7] = (uint8_t)(lp_n >> 8);
+    lp_put32(dst + 8, lp_len);
+    dst[12] = (uint8_t)used;
+    dst[13] = dst[14] = dst[15] = 0;
+    n = 16;
+    for (k = 1; k <= lp_layer; k++)
+        dst[n++] = lp_lslot[k];
+    for (s = 1; s <= LP_NPAT; s++)
+        if (used >> s & 1u) {
+            for (k = 0; k < FM6_PACKED; k++)
+                dst[n + k] = ps[s].pk[k];
+            n += FM6_PACKED;
+        }
+    for (k = 0; k < lp_n; k++) {
+        lp_put32(dst + n, lp_ev[k].t);
+        dst[n + 4] = (uint8_t)(lp_ev[k].c & ~LP_FRESH);
+        dst[n + 5] = lp_ev[k].a;
+        dst[n + 6] = lp_ev[k].b;
+        dst[n + 7] = lp_ev[k].layer;
+        n += 8;
+    }
+    lp_hold = 0;
+    return n;
+}
+
+int fm_loop_restore(const uint8_t *src, uint32_t n)
+{
+    uint32_t k, s, pos, used, nev, len, layers, want = 16, last = 0;
+    if (lp_state != LP_IDLE || n < 16 || src[0] != 'F' || src[1] != 'u' || src[2] != 'L' || src[3] != 'p' || src[4] != 1)
+        return -1;
+    layers = src[5];
+    nev = (uint32_t)src[6] | (uint32_t)src[7] << 8;
+    len = lp_get32(src + 8);
+    used = src[12];
+    if (nev > LP_NEV || (used & 1u) || (nev == 0) != (layers == 0) || (nev == 0) != (len == 0))
+        return -1;
+    for (s = 1; s <= LP_NPAT; s++)
+        if (used >> s & 1u)
+            want += FM6_PACKED;
+    if (n != want + layers + nev * 8u)
+        return -1;
+    for (k = 0; k < layers; k++) {                 /* each layer's slot: none yet, the live one, or a kept one */
+        uint8_t sl = src[16 + k];
+        if (sl != LP_NOSLOT && sl != 0 && (sl > LP_NPAT || !(used >> sl & 1u)))
+            return -1;
+    }
+    pos = want + layers;
+    for (k = 0; k < nev; k++, pos += 8) {
+        uint32_t t = lp_get32(src + pos), c = src[pos + 4], a = src[pos + 5], layer = src[pos + 7];
+        if (t >= len || t < last || layer == 0 || layer > layers)
+            return -1;
+        if (!((c == C_KEY && a < FM_NKEY) || (c == C_ORN && a < ORN_N) || (c == C_BEND && a < 2u)))
+            return -1;
+        last = t;
+    }
+    pos = 16 + layers;
+    for (s = 1; s <= LP_NPAT; s++) {
+        ps[s].used = 0;
+        if (used >> s & 1u) {
+            for (k = 0; k < FM6_PACKED; k++)
+                ps[s].pk[k] = src[pos + k];
+            fm6_unpack(ps[s].pk, ps[s].v);
+            fm6_lfo_reset(&ps[s].lfo, ps[s].v);
+            ps[s].used = 1;
+            pos += FM6_PACKED;
+        }
+    }
+    for (k = 1; k < 256; k++)
+        lp_lslot[k] = k <= layers ? src[16 + k - 1] : LP_NOSLOT;
+    for (k = 0; k < nev; k++, pos += 8) {
+        lp_ev[k].t = lp_get32(src + pos);
+        lp_ev[k].c = src[pos + 4];
+        lp_ev[k].a = src[pos + 5];
+        lp_ev[k].b = src[pos + 6];
+        lp_ev[k].layer = src[pos + 7];
+    }
+    lp_n = nev;
+    lp_len = len;
+    lp_layer = (uint8_t)layers;
+    lp_pos = lp_next = lp_keys_down = lp_other_down = 0;
+    lp_click_at = 0.0f;
+    BARRIER();
+    lp_state = nev ? LP_STOP : LP_IDLE;
+    fm_loop_state = lp_state;
+    fm_loop_layers = lp_layer;
+    fm_loop_pos = 0;
+    fm_loop_len = lp_len;
+    fm_loop_events = lp_n;
+    fm_loop_gen++;
+    return 0;
+}
+
+void fm_loop_ruler_text(int bpm, int beats, char *b)
+{
+    int secs = bpm > 0 ? (beats * 60 + bpm / 2) / bpm : 0, m = secs / 60, sec = secs % 60;
+    itoa_s(m, b);
+    while (*b)
+        b++;
+    *b++ = ':';
+    *b++ = (char)('0' + sec / 10);
+    *b++ = (char)('0' + sec % 10);
+    *b = 0;
 }
 
 /* ------------------------------------------------------------ settings --- */
@@ -1104,6 +1249,8 @@ static void drain(void)
 {
     while (q_r != q_w) {
         cmd_t c = q[q_r % QN];
+        if (c.c == C_LOOP && lp_hold)             /* the main loop is copying the loop: the tap waits its turn */
+            break;
         BARRIER();
         q_r++;
         switch (c.c) {
@@ -1138,7 +1285,7 @@ static void drain(void)
             }
             break;
         case C_PANIC: quiet(); break;
-        case C_LOOP: lp_cmd(c.a); break;
+        case C_LOOP: lp_busy = 1; lp_cmd(c.a); lp_busy = 0; break;
         case C_PATCH:
             if (patch_seen != patch_gen) {
                 patch_seen = patch_gen;

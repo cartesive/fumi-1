@@ -43,6 +43,11 @@ int plat_store_save(uint32_t obj, const void *src, uint32_t len);   /* 0 = ok */
 #define PLAT_STORE_MAX 3840u           /* bytes per object */
 enum { OBJ_PROJ, OBJ_PANEL, OBJ_NOBJ };
 /* flash: OBJ_PROJ 0xFC000, OBJ_PANEL 0xDC000 (2 sectors each, inside Felucca's data area) */
+/* the loop's own object (1.1.0): bigger than storage.c's, so an A/B pair of three sectors each just below the panel's
+ * (0xD6000 and 0xD9000, inside Felucca's data window), written with the same hooks and the same commit record */
+#define PLAT_LOOP_MAX 11776u           /* three sectors less the header page */
+int plat_loop_load(void *dst, uint32_t max);   /* bytes loaded, < 0 = none / bad */
+int plat_loop_save(const void *src, uint32_t len);   /* 0 = ok, verified */
 
 /* audio load in % of the render budget, and xruns since boot (device: from the ISR) */
 uint32_t plat_cpu_pct(void);

@@ -120,6 +120,21 @@ int project_load(void)
 
 int project_save(void) { return plat_store_save(OBJ_PROJ, &proj, sizeof proj); }
 
+/* the loop (1.1.0): its image (fumi.h) in the app's own flash object, saved by ui.c's autosave once it has changed and is
+ * stopped, restored at boot before the audio starts */
+static uint8_t loop_img[PLAT_LOOP_MAX] OM_POOL;
+typedef char loop_img_fits[PLAT_LOOP_MAX >= FM_LOOP_IMAGE_MAX ? 1 : -1];
+int loop_load(void)
+{
+    int n = plat_loop_load(loop_img, sizeof loop_img);
+    return n > 0 ? fm_loop_restore(loop_img, (uint32_t)n) : -1;
+}
+int loop_save(void)
+{
+    uint32_t n = fm_loop_image(loop_img, sizeof loop_img);
+    return n ? plat_loop_save(loop_img, n) : -1;
+}
+
 void project_apply(void)
 {
     int i;

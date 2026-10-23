@@ -101,11 +101,16 @@ played, nothing is quantised.
   REC tap while the loop plays: overdub on; again: off. Each overdub is a layer.
 - **PLAY** tap: stop, or start from the top. PLAY held a second: undo the last layer. REC held a second:
   clear the loop (the screen asks you to keep holding).
-- **ENV** is the Loop page: BPM 20–240, length 4–256 beats (the knob moves four at a time), and a quiet click
-  on the beat, off by default. The ruler only decides where the loop ends by itself and where the click falls.
-  At 20 BPM and 256 beats a loop runs twelve minutes. The store holds 1024 events across all layers, about 490
-  notes: a long loop is a sparse one, and once the store is full further presses are not recorded. A loop is
-  never shorter than one beat: closing it early with REC stretches it to the beat (three seconds at 20 BPM).
+- **ENV** is the Loop page: BPM 20–240, length 4–256 beats (the knob moves four at a time), a quiet click
+  on the beat, off by default, and the ruler's length as a time. The ruler only decides where the loop ends by
+  itself and where the click falls. At 20 BPM and 256 beats a loop runs twelve minutes. The store holds 1024
+  events across all layers, about 490 notes: a long loop is a sparse one, and once the store is full further
+  presses are not recorded. A loop is never shorter than one beat: closing it early with REC stretches it to
+  the beat (three seconds at 20 BPM).
+- **The loop survives power-off** (1.1.0). A loop that has been stopped is written to flash a few seconds
+  later, once nothing sounds and nothing is touched, with its layers' instruments, and comes back stopped at
+  the next power-on: PLAY starts it. A cleared loop is written as empty. A loop left playing is not written,
+  so what comes back is the last one stopped. It lives in a flash object of its own, apart from the setup.
 - Recorded: the keys, the ornament keys and the bend buttons, with their timing. Not recorded: knob moves,
   the LFO, ARP and GLO buttons, and MASTER, so your left hand shapes the level of everything live.
 - The loop stores keys, not pitches: change 本数 or the tuning while it plays and the loop follows. Notes
