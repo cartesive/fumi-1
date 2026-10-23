@@ -129,9 +129,9 @@ int loop_load(void)
     int n = plat_loop_load(loop_img, sizeof loop_img);
     return n > 0 ? fm_loop_restore(loop_img, (uint32_t)n) : -1;
 }
-int loop_save(void)
+int loop_save(uint32_t *gen)
 {
-    uint32_t n = fm_loop_image(loop_img, sizeof loop_img);
+    uint32_t n = fm_loop_image(loop_img, sizeof loop_img, gen);
     return n ? plat_loop_save(loop_img, n) : -1;
 }
 

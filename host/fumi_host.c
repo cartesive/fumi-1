@@ -26,6 +26,7 @@
  *   reboot                       re-run boot from the simulated flash (persistence test)
  *   store_v2 VOICE | store_v3 VOICE   an older project (format 2 / 3) on instrument VOICE, for the migration
  *   store_v4 RATE OROSHI              a 1.0.8 (format 4) project with that trill rate and oroshi (1.1.0 moved the defaults)
+ *   loop_fail N                       the next N loop saves fail, as a failing flash would
  */
 #define OM_HOST 1
 #define FM_HOST 1
@@ -140,6 +141,7 @@ int plat_store_save(uint32_t obj, const void *src, uint32_t len)
 static uint8_t loop_store[PLAT_LOOP_MAX];
 static int loop_store_len = -1;
 static uint32_t loop_writes;
+static int loop_fail;                                  /* loop_fail N: the next N saves fail */
 int plat_loop_load(void *dst, uint32_t max)
 {
     int n = loop_store_len;
@@ -154,6 +156,10 @@ int plat_loop_save(const void *src, uint32_t len)
 {
     if (len > PLAT_LOOP_MAX)
         return -1;
+    if (loop_fail) {
+        loop_fail--;
+        return -7;
+    }
     memcpy(loop_store, src, len);
     loop_store_len = (int)len;
     loop_writes++;
@@ -634,6 +640,8 @@ int main(int argc, char **argv)
             p4.par[P_TRILL_OROSHI] = (int16_t)atoi(b);
             p4.leds = 1;
             plat_store_save(OBJ_PROJ, &p4, sizeof p4);
+        } else if (!strcmp(cmd, "loop_fail")) {       /* loop_fail N: the next N loop saves fail (the flash) */
+            loop_fail = atoi(a);
         } else if (!strcmp(cmd, "echo"))
             printf("%s", line + 5);
         else {

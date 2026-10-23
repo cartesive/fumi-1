@@ -105,6 +105,37 @@ static int loop_heads(st_hdr_t *h, int *ok)              /* the copy in charge b
     ok[1] = loop_head(1, &h[1]) == 0;
     return ok[0] && ok[1] ? (h[1].seq > h[0].seq) : ok[1] ? 1 : ok[0] ? 0 : -1;
 }
+static uint32_t loop_crc_pages(int copy, uint32_t len)   /* the payload's CRC (storage.c's zlib CRC-32), read in pages */
+{
+    static const uint32_t T[16] = {
+        0x00000000u, 0x1DB71064u, 0x3B6E20C8u, 0x26D930ACu, 0x76DC4190u, 0x6B6B51F4u, 0x4DB26158u, 0x5005713Cu,
+        0xEDB88320u, 0xF00F9344u, 0xD6D6A3E8u, 0xCB61B38Cu, 0x9B64C2B0u, 0x86D3D2D4u, 0xA00AE278u, 0xBDBDF21Cu};
+    uint8_t pg[256];
+    uint32_t off, i, c = 0xFFFFFFFFu;
+    for (off = 0; off < len; off += 256u) {
+        uint32_t n = len - off > 256u ? 256u : len - off;
+        if (st_read(loop_base(copy) + ST_PAYLOAD_OFF + off, pg, n))
+            return ~0u;                                  /* never the stored CRC of anything but by chance: treated as bad */
+        for (i = 0; i < n; i++) {
+            c ^= pg[i];
+            c = (c >> 4) ^ T[c & 15u];
+            c = (c >> 4) ^ T[c & 15u];
+        }
+    }
+    return ~c;
+}
+static int loop_current(st_hdr_t *h, int *ok)            /* the copy in charge: a valid header and a payload that checks
+                                                          * (as storage.c's st_current), so a save never erases the only
+                                                          * good copy; 0 / 1, or -1 */
+{
+    int cur = loop_heads(h, ok), k;
+    for (k = 0; k < 2 && cur >= 0; k++) {
+        int copy = cur ^ k;
+        if (ok[copy] && loop_crc_pages(copy, h[copy].len) == h[copy].crc)
+            return copy;
+    }
+    return -1;
+}
 int plat_loop_load(void *dst, uint32_t max)
 {
     st_hdr_t h[2];
@@ -127,7 +158,7 @@ int plat_loop_save(const void *src, uint32_t len)
     uint32_t base, off;
     if (!flash_ok || len > PLAT_LOOP_MAX)
         return -1;
-    cur = loop_heads(h, ok);
+    cur = loop_current(h, ok);                            /* write the other copy; the seq above both headers */
     copy = cur == 0 ? 1 : 0;
     base = loop_base(copy);
     for (off = 0; off < LOOP_SECTORS * 4096u; off += 4096u)
@@ -141,7 +172,7 @@ int plat_loop_save(const void *src, uint32_t len)
     w.magic = ST_MAGIC;
     w.type = (uint16_t)LOOP_TYPE;
     w.slot = (uint16_t)copy;
-    w.seq = (cur < 0 ? 0u : h[cur].seq) + 1u;
+    w.seq = ((ok[0] ? h[0].seq : 0u) > (ok[1] ? h[1].seq : 0u) ? (ok[0] ? h[0].seq : 0u) : (ok[1] ? h[1].seq : 0u)) + 1u;
     w.len = len;
     w.crc = st_crc32(src, len);
     w.rsv[0] = w.rsv[1] = 0xFFFFFFFFu;

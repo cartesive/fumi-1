@@ -57,3 +57,23 @@ reboot
 wait 100
 expect loop_state 0
 expect loop_layers 0
+# review (1.1.0): a loop save that fails does not starve the setup's save, and is tried again a minute later
+tap REC
+wait 50
+key w5 down
+wait 300
+key w5 up
+wait 600
+tap REC
+wait 50
+tap PLAY
+wait 50
+expect loop_state 5
+loop_fail 1
+spin K1 2
+wait 5000
+expect loop_writes 3
+expect store_writes 1
+expect dirty 0
+wait 61000
+expect loop_writes 4

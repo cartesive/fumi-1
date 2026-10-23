@@ -58,6 +58,7 @@ static struct {
     uint8_t dirty;
     uint32_t act_t, saved_t;
     uint32_t loop_gen;                 /* the loop's generation last saved (fm_loop_gen) */
+    uint32_t loop_retry_t;             /* a loop save failed: not before this (a minute), the setup saved meanwhile */
     char msg[2][24];
     uint32_t msg_until;
     int8_t touched;
@@ -126,13 +127,14 @@ static void turn(int role, int p, int32_t e)
     if (!e || p == K_NONE)
         return;
     pi = fm_param_info(p);
-    e = accel(role, e, pi->hi - pi->lo);
-    if (p == P_LOOP_BEATS) {                       /* four beats a detent (1.1.0: 4..256), landing on a multiple of four */
-        int32_t v = proj.par[p] + 4 * e;
-        knob_set(p, (int)((v + (v < 0 ? -2 : 2)) / 4 * 4));
+    if (p == P_LOOP_BEATS) {                       /* four beats a detent (1.1.0: 4..256), landing on a multiple of four:
+                                                    * a value between two (an older setup's) snaps the way the knob turns */
+        int32_t v = proj.par[p];
+        e = accel(role, e, (pi->hi - pi->lo) / 4);
+        knob_set(p, (int)((e > 0 ? v / 4 + e : (v + 3) / 4 + e) * 4));
         return;
     }
-    knob_set(p, proj.par[p] + e);
+    knob_set(p, proj.par[p] + accel(role, e, pi->hi - pi->lo));
 }
 
 static void toggle(int p, const char *what)
@@ -614,7 +616,7 @@ static void draw_knobs(void)
         int hot = now_touch && ui.touched == (int)i;
         char t[16];
         if (p == K_NONE) {
-            if (ui.view == V_LOOP && i == 3) {     /* the ruler's length as a time (1.1.0): twelve minutes read as 12:00 */
+            if (ui.view == V_LOOP && i == 3) {     /* the ruler's length as a time (1.1.0): 256 beats at 20 read as 12:48 */
                 cv_rect(x, 14, 1, KNB_H - 30, K_LINE);
                 text_c(cx, 6, &FONT_XS, "Length", K_DIM);
                 fm_loop_ruler_text(proj.par[P_LOOP_BPM], proj.par[P_LOOP_BEATS], t);
@@ -693,10 +695,15 @@ static void autosave(void)
         return;
     if (fm_loop_state != LP_IDLE && fm_loop_state != LP_STOP)
         return;                                    /* the loop is running: a flash erase would silence it */
-    if (fm_loop_gen != ui.loop_gen) {              /* the loop, stopped and changed: its own object (1.1.0), one erase a pass */
-        if (loop_save() == 0)
-            ui.loop_gen = fm_loop_gen;
-        return;
+    if (fm_loop_gen != ui.loop_gen && (int32_t)(now - ui.loop_retry_t) >= 0) {   /* the loop, stopped and changed: its own
+                                                                                 * object (1.1.0); one erase a pass */
+        uint32_t g;
+        if (loop_save(&g) == 0) {
+            ui.loop_gen = g;                       /* the generation the image was of: a change during the write is not lost */
+            return;
+        }
+        ui.loop_retry_t = now + 60000u;            /* failed: the setup's save goes on; the loop again in a minute */
+        say("LOOP", "NOT SAVED");
     }
     if (!ui.dirty)
         return;
@@ -713,6 +720,13 @@ void ui_init(void)
     ui.tuning_prev = TN_SUIKO;
     ui.loop_gen = fm_loop_gen;                     /* what loop_load brought back is saved already */
     lcd_fill(0, 0, 240, 240, K_BG);
+}
+
+void ui_reinit(void)
+{
+    uint32_t g = ui.loop_gen;
+    ui_init();
+    ui.loop_gen = g;
 }
 
 void ui_frame(void)

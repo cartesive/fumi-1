@@ -20,7 +20,9 @@ Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 re
   image (up to 9.5 KB) is too big for the platform's 3.8 KB objects, so it has an A/B pair of three sectors each of
   its own at 0xD6000 and 0xD9000, just below the panel calibration inside Felucca's data window, written with the
   platform's own hooks and commit record (`plat_loop_save` / `plat_loop_load` in plat_fm1.c; storage.c untouched).
-  While the main loop copies the image the loop's own taps wait in the queue.
+  While the main loop copies the image the loop's own taps wait in the queue. A save that fails is tried again a
+  minute later and does not hold up the setup's save. Found in review before release: a loop whose layers used the
+  eighth instrument slot saved an image that could not be restored (the slot bitmap was a byte short).
 - **The Loop page shows the ruler's length as a time** (m:ss) in its fourth slot.
 - The voices are unchanged, so no new SoundFont: `FuMi-1.0.8.sf2` on the 1.0.8 release stays the SoundFont.
 

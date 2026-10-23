@@ -1364,7 +1364,7 @@ int main(void)
         fm_set(P_LOOP_BPM, 120);
         fm_set(P_LOOP_BEATS, 8);
         run(0, 256);
-        CHECK("an empty loop's image is a header alone", fm_loop_image(img, sizeof img) == 16);
+        CHECK("an empty loop's image is a header alone", fm_loop_image(img, sizeof img, 0) == 16);
         CHECK("and restores to an empty loop", fm_loop_restore(img, 16) == 0 && fm_loop_state == LP_IDLE);
         gen = fm_loop_gen;
         fm_loop_rec();
@@ -1375,20 +1375,20 @@ int main(void)
         run(0, 11008);
         fm_loop_rec();                            /* closed: it plays */
         run(0, 256);
-        CHECK("a playing loop gives no image", fm_loop_state == LP_PLAY && fm_loop_image(img, sizeof img) == 0);
+        CHECK("a playing loop gives no image", fm_loop_state == LP_PLAY && fm_loop_image(img, sizeof img, 0) == 0);
         CHECK("the close moved the loop's generation", fm_loop_gen != gen);
         fm_loop_play();                           /* stopped */
         run(0, 256);
         CHECK("stopped", fm_loop_state == LP_STOP);
         len = fm_loop_len;
         ev = fm_loop_events;
-        n = fm_loop_image(img, sizeof img);
+        n = fm_loop_image(img, sizeof img, 0);
         CHECK("the image: the header, the layer's slot, one packed instrument, the events", n == 16u + 1u + 128u + 8u * ev);
         for (k = 0; k + 128 <= n; k++)
             if (!memcmp(img + k, fm_patch_builtin(1), 128))
                 found = 1;
         CHECK("the image carries the layer's instrument, Koto II, packed", found);
-        CHECK("an image too big for the buffer is refused", fm_loop_image(img, 100) == 0);
+        CHECK("an image too big for the buffer is refused", fm_loop_image(img, 100, 0) == 0);
         fm_init();
         fm_set(P_VOICE, slot_of("Taiko"));
         fm_set(P_REVERB, 0);
@@ -1419,6 +1419,41 @@ int main(void)
         printf("  restored loop: %.1f dB, centroid %.0f Hz; the pluck live in Koto II: %.1f dB, %.0f Hz\n", l_loop, c_loop, l_live, c_live);
         CHECK("the restored layer plays its own instrument, Koto II, though PRESETS is on Taiko",
               fabs(l_loop - l_live) < 1.0 && fabs(c_loop - c_live) < 0.1 * c_live);
+    }
+    {   /* review (1.1.0): a loop whose eight layers were each recorded in a different instrument uses every slot, the
+         * eighth included, and still comes back */
+        static uint8_t img[16384];
+        uint32_t n, v, gen;
+        fm_init();
+        fm_set(P_REVERB, 0);
+        fm_set(P_YOIN, 0);
+        fm_set(P_LOOP_BPM, 120);
+        fm_set(P_LOOP_BEATS, 8);
+        for (v = 0; v < 8; v++) {
+            fm_set(P_VOICE, (int)v);
+            run(0, 256);
+            fm_loop_rec();                        /* arm, or overdub on */
+            run(0, 256);
+            fm_key(5, 1);
+            run(0, 2048);
+            fm_key(5, 0);
+            run(0, 2048);
+            fm_loop_rec();                        /* close, or overdub off */
+            run(0, 256);
+        }
+        fm_loop_play();
+        run(0, 256);
+        CHECK("eight layers, stopped", fm_loop_state == LP_STOP && fm_loop_layers == 8);
+        n = fm_loop_image(img, sizeof img, &gen);
+        CHECK("the image holds eight packed instruments", n == 16u + 8u + 8u * 128u + 8u * fm_loop_events && gen == fm_loop_gen);
+        fm_init();
+        CHECK("and restores, eight layers", fm_loop_restore(img, n) == 0 && fm_loop_layers == 8 && fm_loop_state == LP_STOP);
+        fm_loop_clear();
+        run(0, 256);
+        gen = fm_loop_gen;
+        fm_loop_clear();
+        run(0, 256);
+        CHECK("clearing an empty loop does not move the generation (no needless flash write)", fm_loop_gen == gen);
     }
     return tu_done("fumi");
 }

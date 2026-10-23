@@ -30,9 +30,10 @@ int project_load(void);                  /* 0 = loaded; else defaults are in pla
 int project_save(void);                  /* 0 = saved and verified */
 void project_apply(void);                /* every value to the engine (boot, load) */
 int loop_load(void);                     /* the loop back from its flash object, stopped (boot); 0 = restored */
-int loop_save(void);                     /* the stopped loop's image to flash; 0 = saved and verified */
+int loop_save(uint32_t *gen);            /* the stopped loop's image to flash; 0 = saved and verified, gen = its generation */
 
 void ui_init(void);
+void ui_reinit(void);                    /* the screen afresh after an aborted update: a pending loop save is kept */
 void ui_frame(void);
 void ui_input_only(void);
 int ui_dirty(void);

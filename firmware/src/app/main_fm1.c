@@ -342,7 +342,7 @@ static void fm1_main(void)
             fm_panic();
             if (flash_ok)
                 ota_session();                      /* returns only if nothing was committed */
-            ui_init();
+            ui_reinit();
         }
         if (usb.uboot_req)
             enter_uboot("UBOOT (USB)");

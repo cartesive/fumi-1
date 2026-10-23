@@ -37,8 +37,8 @@ static const fm_param_t PARAMS[P_NPARAMS] = {
     {"User mi", -50, 50, 0}, {"User fa", -50, 50, 0}, {"User fa#", -50, 50, 0}, {"User sol", -50, 50, 0},
     {"User 4", -50, 50, 0}, {"User la", -50, 50, 0}, {"User tib", -50, 50, 0}, {"User ti", -50, 50, 0},
     {"User do", -50, 50, 0}, {"User do#", -50, 50, 0}, {"User re", -50, 50, 0}, {"User 11", -50, 50, 0},
-    {"Loop BPM", 20, 240, 60}, {"Loop beats", 4, 256, 32}, {"Click", 0, 1, 0},      /* 1.1.0: up to twelve minutes, the knob
-                                                                                        * moves the beats four at a time (ui.c) */
+    {"Loop BPM", 20, 240, 60}, {"Loop beats", 4, 256, 32}, {"Click", 0, 1, 0},      /* 1.1.0: up to 12:48 (256 beats at 20),
+                                                                                        * the knob moves the beats four at a time */
     {"Pair gap", 30, 50, 42}, {"Ta level", 30, 100, 64}, {"First", 100, 127, 127}, {"Jitter", 0, 20, 5}, {"Oroshi", 0, 3, ORO_LONG},
 };
 const fm_param_t *fm_param_info(int p) { return (p >= 0 && p < P_NPARAMS) ? &PARAMS[p] : &PARAMS[0]; }
@@ -819,12 +819,13 @@ static void lp_close(void)                        /* the loop is as long as what
 
 static void lp_clear(void)
 {
+    if (lp_n || lp_layer)                         /* an empty loop cleared again is no change (no needless flash write) */
+        fm_loop_gen++;
     lp_n = lp_len = lp_pos = lp_next = lp_keys_down = lp_other_down = 0;
     lp_layer = 0;
     lp_state = LP_IDLE;
     lp_release_notes();
     lp_quiet();
-    fm_loop_gen++;
 }
 
 static void lp_dub_off(void)
@@ -989,14 +990,16 @@ static void lp_block(void)                        /* every block, before the voi
 }
 
 /* the loop's image (fumi.h): "FuLp", version 1, layers, events (16 bit), length (32 bit), the slots in use as bits
- * 1..8, three spare; then each layer's slot, each used slot's packed instrument, each event as t (32 bit) c a b layer.
+ * 1..8 of a 16-bit word, two spare; then each layer's slot, each used slot's packed instrument, each event as t (32 bit)
+ * c a b layer. The hold: the render is an interrupt on the same core as the main loop, so once lp_hold is set a drain
+ * that starts leaves the loop's commands in the queue, and one that had begun a loop command (lp_busy) finishes it first.
  * Only the slots the layers name are kept (a tail's slot is not). The codes c are the engine's own (C_KEY, C_ORN,
  * C_BEND), so the image is this engine's and version 1 says so. */
 typedef char lp_image_max_fits[FM_LOOP_IMAGE_MAX >= 16u + 255u + LP_NPAT * FM6_PACKED + LP_NEV * 8u ? 1 : -1];
 static void lp_put32(uint8_t *d, uint32_t v) { d[0] = (uint8_t)v; d[1] = (uint8_t)(v >> 8); d[2] = (uint8_t)(v >> 16); d[3] = (uint8_t)(v >> 24); }
 static uint32_t lp_get32(const uint8_t *s) { return (uint32_t)s[0] | (uint32_t)s[1] << 8 | (uint32_t)s[2] << 16 | (uint32_t)s[3] << 24; }
 
-uint32_t fm_loop_image(uint8_t *dst, uint32_t max)
+uint32_t fm_loop_image(uint8_t *dst, uint32_t max, uint32_t *gen)
 {
     uint32_t n = 16, k, s, used = 0, spin;
     lp_hold = 1;
@@ -1025,7 +1028,10 @@ uint32_t fm_loop_image(uint8_t *dst, uint32_t max)
     dst[7] = (uint8_t)(lp_n >> 8);
     lp_put32(dst + 8, lp_len);
     dst[12] = (uint8_t)used;
-    dst[13] = dst[14] = dst[15] = 0;
+    dst[13] = (uint8_t)(used >> 8);               /* slot 8 (review, 1.1.0) */
+    dst[14] = dst[15] = 0;
+    if (gen)
+        *gen = fm_loop_gen;                       /* read under the hold: what this image is of */
     n = 16;
     for (k = 1; k <= lp_layer; k++)
         dst[n++] = lp_lslot[k];
@@ -1055,7 +1061,7 @@ int fm_loop_restore(const uint8_t *src, uint32_t n)
     layers = src[5];
     nev = (uint32_t)src[6] | (uint32_t)src[7] << 8;
     len = lp_get32(src + 8);
-    used = src[12];
+    used = (uint32_t)src[12] | (uint32_t)(src[13] & 1u) << 8;
     if (nev > LP_NEV || (used & 1u) || (nev == 0) != (layers == 0) || (nev == 0) != (len == 0))
         return -1;
     for (s = 1; s <= LP_NPAT; s++)
@@ -1249,8 +1255,14 @@ static void drain(void)
 {
     while (q_r != q_w) {
         cmd_t c = q[q_r % QN];
-        if (c.c == C_LOOP && lp_hold)             /* the main loop is copying the loop: the tap waits its turn */
-            break;
+        if (c.c == C_LOOP) {                      /* the main loop is copying the loop: the tap waits its turn */
+            lp_busy = 1;
+            BARRIER();
+            if (lp_hold) {
+                lp_busy = 0;
+                break;
+            }
+        }
         BARRIER();
         q_r++;
         switch (c.c) {
@@ -1285,7 +1297,7 @@ static void drain(void)
             }
             break;
         case C_PANIC: quiet(); break;
-        case C_LOOP: lp_busy = 1; lp_cmd(c.a); lp_busy = 0; break;
+        case C_LOOP: lp_cmd(c.a); lp_busy = 0; break;
         case C_PATCH:
             if (patch_seen != patch_gen) {
                 patch_seen = patch_gen;
