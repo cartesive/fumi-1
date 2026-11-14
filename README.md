@@ -300,3 +300,5 @@ Apache-2.0). The plate reverb (Dattorro) is FoMni's. GPL-3.0-only; see [LICENSIN
 Suiko and ST-50 are names of 水光社 (Suikohsha). FuMi-1 is inspired by the ST-50 and is not affiliated with
 or endorsed by Suikohsha, M-VAVE or Hügelton Instruments. Yamaha DX7 patch data is read by the bench for
 listening only and is never part of FuMi.
+
+You can also try FuMi-1 in the browser, no flashing needed, in the free community [FM-1 Emulator](https://fm1-emulator.atst.tools/).
