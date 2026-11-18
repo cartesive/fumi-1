@@ -3,6 +3,32 @@
 Identities are `FM-1_7` + major, minor and patch as two digits each; the FM-1 reports the identity
 (`python3 tools/fm1_install.py --info`).
 
+## 1.1.1 (18 Nov 2026) — `FM-1_7010101`
+
+- **The newer FM-1s save and update.** FM-1s sold since autumn 2026 (mostly from AliExpress) carry a UC25HQ80 flash
+  part (JEDEC `B3 60 14`) instead of the Puya P25Q80 (`85 60 14`): the same 1 MiB, the same plain SPI NOR commands.
+  1.1.0 and before only knew the Puya, so on such a unit the boot took the flash for unknown and ran from RAM:
+  settings and the loop were lost at power-off, and the update loader was never started, so no firmware could be
+  installed from FuMi-1 (the way back was the chip's own update mode). The boot now takes either part
+  (`firmware/hal/fm1_flash_ok.h`, from fm1-base#35 by Laurens, by way of FoMni; any other answer is still RAM only,
+  nothing written). This is the fix SLOOP 2.8.5, Clipper 1.3.1 and FoMni ship. The author's unit is a Puya, so the
+  UC25HQ80 path is tested by the other firmwares' owners, not here: please report.
+- **The platform moved to FoMni's `6a01411`** (`docs/upstream.md`; the guard follows), which also brings:
+  - *M-UPGRADE 3.11 finds the FM-1.* To the plain handshake the firmware now answers its name, `_` and three digits
+    (`FM-1_701`), which that updater accepts; the installers (the install page, `tools/fm1_install.py`) ask again with
+    the body `01` and get the whole identity, `FM-1_7010101`. An install page loaded before this release reports a
+    "mismatch" after a successful install of 1.1.1: reload the page. `fm1_install.py --info` shows the whole identity.
+  - *Stock V16 as well as V15.* The install page's "Back to the stock firmware" takes either file; the FM-1 takes the
+    one whose bootloader it already has (M-UPGRADE gives V16 its own), and the page says so when it does not.
+    `tools/fm1_rescue.py` takes both flash parts and any of the stock files given, and runs on Linux too.
+  - *M-VAVE's Open firmware* (FM1_OFFICIAL_OPEN): only stock V15 is installed over it; the page says to go back to stock
+    first.
+  - `usb.c`'s SysEx queue is 128 entries (FoMni's screen reader needs it; 256 B more RAM). FuMi-1 does not take the
+    screen reader itself.
+- Tests: `flash-ok` (the two parts in, everything else out), `ota-hs-{long,short,loader}` (the handshake's two answers),
+  `installer-hs` (the web installer against fake FM-1s); FoMni's installer and update-entry tests as they now are.
+- Nothing in the instrument changed: the sound, the screens and the saved setups are 1.1.0's (PROJ_FORMAT 5).
+
 ## 1.1.0 (23 Oct 2026) — `FM-1_7010100`
 
 - **The loop's ruler reaches further**: BPM 20–240 (was 30–120), length 4–256 beats (was 8–64), the beats knob

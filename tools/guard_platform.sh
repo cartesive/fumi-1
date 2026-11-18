@@ -8,7 +8,7 @@
 #   tools/guard_platform.sh            (run by tests/run_tests.sh and before every build)
 set -u
 cd "$(dirname "$0")/.."
-UPSTREAM=b81eb6b661c35948ec2d1059664d4e5790999305
+UPSTREAM=6a0141152a4afd1eb7574c8d6be410f437b87633
 PROTECTED="firmware/hal firmware/loader firmware/crt0.S firmware/app.ld
 firmware/src/ota.c firmware/src/usb.c firmware/src/storage.c firmware/src/lcd.c firmware/src/gfx.c
 firmware/src/libc.c firmware/src/midi_uart.c

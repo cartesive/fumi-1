@@ -18,12 +18,13 @@ FuMi lives in `firmware/src/app/` and `firmware/src/dsp/`.
 
 <img src="docs/img/screen-home.png" width="240" height="240" alt="FuMi-1's HOME screen: 1本, A3, SUIKO tuning, the in scale, and the koto 琴 large"> <img src="docs/img/screen-loop.png" width="240" height="240" alt="FuMi-1 overdubbing a loop: the DUB tag and the loop bar under the keys">
 
-**Status (23 Oct 2026):** version 1.1.0 (identity `FM-1_7010100`). It has run on one FM-1, the author's,
+**Status (18 Nov 2026):** version 1.1.1 (identity `FM-1_7010101`; 1.1.1 runs on the FM-1s sold since autumn 2026
+with the UC25HQ80 flash part as well as the earlier ones). It has run on one FM-1, the author's,
 since 0.1. What works: the pitch core and the measured tuning, twenty-one instruments with their names in
 kanji, the bends, the seven ornament keys (the koto's left hand among them), vibrato, the trill in pairs
 with oroshi, 余韻, mono with slide, the voicing stages, reverb, MIDI in with velocity and MIDI out, the
 looper, the host simulator, the browser emulator, the audition bench and the web installer. What
-is next: a loop that survives power-off and key slide for the shakuhachi. Releases are listed in `docs/CHANGELOG.md`; the research and the plan are in `docs/research/`
+is next: key slide for the shakuhachi. Releases are listed in `docs/CHANGELOG.md`; the research and the plan are in `docs/research/`
 (`00-START-HERE.md` is the current truth).
 
 FuMi-1 is quieter than the stock firmware at the same MASTER setting, as the Suiko is a gentle
@@ -42,26 +43,32 @@ instrument: turn MASTER up. Turn it down again before switching back to another 
 Custom firmware is installed at your own risk. The FM-1 has a single copy of its firmware and no recovery
 button; a failed install can leave it unable to start.
 
-- **Be on M-VAVE's official V15 first.** FuMi-1, like the other community firmwares, expects it. Check with
-  `python3 tools/fm1_install.py --info`: stock V15 reports `FM-1_015`.
-- **Download and keep M-VAVE's `FM-1.fwsc` (V15)** from [m-vave.com/download](https://www.m-vave.com/download).
-  It is your way back.
+- **Be on M-VAVE's official V15 or V16 first.** FuMi-1, like the other community firmwares, expects it. Check with
+  `python3 tools/fm1_install.py --info`: stock reports `FM-1_015` or `FM-1_016`.
+- **Download and keep M-VAVE's `FM-1.fwsc`** from [m-vave.com/download](https://www.m-vave.com/download) (V16 today;
+  the install page links V15 at the Internet Archive). It is your way back: the FM-1 takes the version whose
+  bootloader it already has.
+- **A newer FM-1 (sold since autumn 2026, mostly from AliExpress)?** It has a different flash part (UC25HQ80). FuMi-1
+  1.1.1 and later know it; on 1.1.0 and before nothing is saved and nothing can be installed from FuMi-1. The way
+  back from an older build is the chip's own update mode (`tools/fm1_rescue.py`, below), or an install page that
+  finds the FM-1 in update mode after OCT− and OCT+ held 5 s.
 - Charge the battery, use a direct USB data cable (no hub), use Chrome or Edge, and close any DAW or other
   tab using MIDI. Do not unplug until the installer says it is done.
-- **Coming from another custom firmware?** Go back to official V15 first, then install FuMi-1. Saved data
+- **Coming from another custom firmware?** Go back to official V15 or V16 first, then install FuMi-1. Saved data
   from other firmwares is not read.
 - FuMi-1 has been run on one FM-1 (the author's). Please report what you find in
   [Issues](https://github.com/cartesive/fumi-1/issues).
 
 ### Getting back
 
-- **To official V15:** the installer page's "Back to the stock firmware" with M-VAVE's `FM-1.fwsc` (it
-  accepts exactly that file), or M-VAVE's own M-UPGRADE.
+- **To official V15 or V16:** the installer page's "Back to the stock firmware" with M-VAVE's `FM-1.fwsc` (it
+  accepts exactly those files), or M-VAVE's own M-UPGRADE (3.11 finds FuMi-1 1.1.1 and later).
 - **Update mode from FuMi-1:** hold OCT− and OCT+ together for 5 seconds (a countdown appears after 2 s).
 - **If FuMi-1 crashes while starting:** it restarts; after two failed starts in a row it comes up in a safe
   mode with no sound and USB on, which accepts an install from the installer page.
 - **Black screen, and the computer sees a device called WL80UBOOT:** the chip is in its own download
-  mode. `tools/fm1_rescue.py FM-1.fwsc` (macOS, no extra hardware) backs the flash up and puts V15 back.
+  mode. `tools/fm1_rescue.py V15.fwsc V16.fwsc` (macOS or Linux, no extra hardware; give it every stock file you
+  have) backs the flash up and puts stock back, on either flash part.
   Otherwise recovery needs [FM-1 Transporter](https://github.com/kurogedelic/FM-1-transporter).
 
 ## Playing

@@ -87,7 +87,7 @@ its name in kanji on the screen; the trill plays in pairs like a hand; and REC i
 </div>
 <div class="status"><strong>Version __VERSION__.</strong> It installs and uninstalls the way Felucca, X0X and
 FoMni do, and the installer can put M-VAVE's own firmware back. Installing is at your own risk; read the
-notes on the install page first. Your FM-1 should be on M-VAVE's V15 before any custom firmware. FuMi-1 is
+notes on the install page first. Your FM-1 should be on M-VAVE's V15 or V16 before any custom firmware. FuMi-1 is
 quieter than the stock firmware at the same MASTER setting: turn MASTER up.</div>
 <nav class="ways" aria-label="Get FuMi-1">
   <a href="emu/"><strong>Try it in the browser</strong><span>The same code the FM-1 runs, with sound. White keys Q–I and A–K, black keys 1–0 and −; no FM-1 needed.</span></a>

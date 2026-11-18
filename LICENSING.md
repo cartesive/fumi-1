@@ -15,6 +15,8 @@ complete corresponding source under the same licence.
 | `firmware/src/dsp/fm6_core.c`: the 6-operator FM synthesis, msfa (Dexed) ported to integer C | Felucca's port of msfa, Copyright 2012 Google Inc., 2016–2025 Pascal Gauthier; only msfa is used (Dexed itself is GPL-3.0) | Apache-2.0 (`LICENSES/Apache-2.0-msfa.txt`) |
 | `firmware/src/dsp/fm6_patch.c` (patch formats), `tools/gen_fm6_tables.py` and the generated `fm6_tables.h`, the helpers in `tools/fumi_patches.py` | Felucca's `eng_fm6.c`, `tools/gen_tables.py`, `tools/gen_fm6_patches.py` | GPL-3.0-only |
 | `firmware/src/dsp/fastmath.h` | Felucca, via FoMni | GPL-3.0-only |
+| The flash parts the storage may use: `firmware/hal/fm1_flash_ok.h`, `tests/host/flash_ok_test.c` | [fm1-base](https://github.com/charlesvestal/fm1-base) (`device/fm1_flash_ok.h`, `tests/flash_ok_test.c`, fm1-base#35), Copyright (C) 2026 Laurens (@profikid), by way of FoMni | MPL-2.0 (compatible with the GPL: MPL-2.0 section 3.3) |
+| The update handshake's tests: `tests/ota_hs_test.c`, `tests/host/installer_hs_test.mjs` | [felucca-bsp](https://github.com/hugelton/felucca-bsp)'s `tests/ota_test.c` and [fm1-base](https://github.com/charlesvestal/fm1-base)'s `tests/installer_hs_test.mjs`, Copyright (C) 2026 Charles Vestal, by way of FoMni | MPL-2.0 (compatible with the GPL: MPL-2.0 section 3.3) |
 | Everything else in `firmware/src/{app,dsp}`, `tests/host/`, `tests/scenarios/`, `web/bench/`, `tools/{analyze_ref,syx_dump,fumi_patches,gen_fm6_tables,check_no_double}.py`, `tools/guard_platform.sh`, `docs/` | FuMi-1 | GPL-3.0-only |
 
 ## Third-party material
